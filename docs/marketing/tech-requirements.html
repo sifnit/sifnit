@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<title>Your Brand POS – technical requirements</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root { --ink: #142031; --muted: #556275; --line: #d6dde7; --accent: #1f6feb; --soft: #eef3fb;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+    --mono: "IBM Plex Mono", Consolas, monospace; }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); font: 8pt/1.32 var(--body); background: #fff; }
+  .page { width: 210mm; height: 297mm; padding: 12mm 14mm 10mm; overflow: hidden; display: flex; flex-direction: column; gap: 3.5mm; }
+  h1, h2 { font-family: var(--display); margin: 0; line-height: 1.15; }
+  h1 { font-size: 17pt; font-weight: 800; }
+  h2 { font-size: 9.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--accent);
+    padding-bottom: 1mm; border-bottom: 1.5px solid var(--ink); margin-bottom: 1.5mm; }
+  .head { display: flex; justify-content: space-between; align-items: end; gap: 6mm; }
+  .head p { color: var(--muted); max-width: 135mm; }
+  .brand { font-family: var(--display); font-weight: 800; font-size: 10pt; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .brand i { width: 14px; height: 14px; border-radius: 4px; background: var(--accent); display: inline-block; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 7mm; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: .55mm 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { width: 27%; color: var(--muted); padding-right: 2mm; }
+  .opt { font-size: 7pt; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 1.5mm; white-space: nowrap; }
+  .plan { font-size: 7pt; font-weight: 600; color: #0f3f8f; background: var(--soft); border-radius: 99px; padding: 0 1.5mm; white-space: nowrap; }
+  code { font-family: var(--mono); font-size: 7.8pt; }
+  .note { background: var(--soft); border-radius: 6px; padding: 3mm; color: var(--ink); }
+  .foot { margin-top: auto; font-size: 7pt; color: var(--muted); display: flex; justify-content: space-between; gap: 6mm; }
+</style>
+</head>
+<body>
+<section class="page">
+  <div class="head">
+    <div style="display:grid;gap:1.5mm">
+      <div class="brand"><i></i>Your Brand POS</div>
+      <h1>Technical requirements</h1>
+      <p>What a shop needs to run the system. Everything runs locally on the shop's network; the internet is needed only
+        for card payments, updates and off-site backups.</p>
+    </div>
+    <div style="text-align:right;color:var(--muted)"><span class="opt">Optional</span> &nbsp;<span class="plan">Planned</span></div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Server (in the shop)</h2>
+      <table>
+        <tr><td>Computer</td><td>Mini PC, Raspberry Pi 4/5 (4 GB) or any Linux/macOS computer, left on during trading</td></tr>
+        <tr><td>Software</td><td>Python 3.9 or newer, OpenSSL. No other packages or database server</td></tr>
+        <tr><td>Storage</td><td>1 GB free is ample; all data in one SQLite file</td></tr>
+        <tr><td>Network</td><td>Wired or Wi-Fi on the shop network, with a fixed IP address (DHCP reservation)</td></tr>
+        <tr><td>Power</td><td>UPS recommended <span class="opt">Optional</span></td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Network and security</h2>
+      <table>
+        <tr><td>Protocol</td><td>HTTPS only, TLS 1.2+, on port 443 (or 8443)</td></tr>
+        <tr><td>Certificate</td><td>Self-signed for trial; trusted certificate via own domain and reverse proxy (e.g. Caddy) for production</td></tr>
+        <tr><td>Wi-Fi</td><td>Covering counter and stock areas; phones join the same network</td></tr>
+        <tr><td>Logins</td><td>Owner and cashier roles, PIN login, 12-hour sessions, lockout after repeated wrong PINs</td></tr>
+        <tr><td>Remote access</td><td>Secure tunnel (e.g. Tailscale) <span class="opt">Optional</span></td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>Register and phones</h2>
+      <table>
+        <tr><td>Register</td><td>Laptop, PC or tablet with a current Chrome, Edge, Safari or Firefox; 10" screen or larger</td></tr>
+        <tr><td>Phones</td><td>iPhone or Android with a current browser and rear camera, for scanning, receiving and stocktake</td></tr>
+        <tr><td>NFC writing</td><td>Android phone with NFC, Chrome browser <span class="plan">Planned</span></td></tr>
+        <tr><td>Install</td><td>Nothing to install; pages can be added to the home screen</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Payments</h2>
+      <table>
+        <tr><td>Cash</td><td>Built in, with Australian 5c rounding and change calculation</td></tr>
+        <tr><td>Card</td><td>Shop's own Square account and reader, used alongside the register</td></tr>
+        <tr><td>Card data</td><td>Never entered into or stored by the POS</td></tr>
+        <tr><td>Integrated reader</td><td>Stripe Terminal or Square Terminal <span class="plan">Planned</span></td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>Scanning hardware</h2>
+      <table>
+        <tr><td>Bench scanner</td><td>2D (QR-capable) presentation scanner, USB or Bluetooth, keyboard (HID) mode with Enter suffix</td></tr>
+        <tr><td>Handheld</td><td>Cordless 2D scanner, keyboard mode, for large items <span class="opt">Optional</span></td></tr>
+        <tr><td>Overhead camera</td><td>1080p autofocus USB webcam on an arm, even LED lighting <span class="opt">Optional</span></td></tr>
+        <tr><td>NFC pad</td><td>13.56 MHz ISO 14443A reader, NTAG21x, USB keyboard mode (UID output) <span class="plan">Planned</span></td></tr>
+        <tr><td>NFC writer</td><td>PC/SC USB reader/writer (ACR122U class) as an alternative to Android <span class="plan">Planned</span></td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Printing and labels</h2>
+      <table>
+        <tr><td>Label printer</td><td>Desktop direct thermal, 2"–4" (e.g. TSC DA/TE series), taking third-party rolls; OS driver installed</td></tr>
+        <tr><td>Tag sizes</td><td>50×25, 50×30, 40×30, 57×32, 62×29 mm presets, any custom size, or A4 21-up sheets</td></tr>
+        <tr><td>Tag content</td><td>QR code: <code>SKU|VENDOR|PRICE</code>, or a link to the stocktake screen</td></tr>
+        <tr><td>NFC labels</td><td>Direct thermal paper labels with NTAG213 inlay, matching printer core size <span class="plan">Planned</span></td></tr>
+        <tr><td>Receipts</td><td>58, 62 or 80 mm thermal printer, or on screen <span class="opt">Optional</span></td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>Australian compliance</h2>
+      <table>
+        <tr><td>GST</td><td>10%, prices GST-inclusive; GST-free items supported</td></tr>
+        <tr><td>Receipts</td><td>Tax invoice format once the shop's ABN is entered</td></tr>
+        <tr><td>Reporting</td><td>GST collected per period to support BAS</td></tr>
+        <tr><td>Time zones</td><td>All Australian states and territories</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Data and backup</h2>
+      <table>
+        <tr><td>Storage</td><td>Single SQLite database file on the shop's computer</td></tr>
+        <tr><td>Backup</td><td>One-click download from Settings; automatic off-site backup <span class="plan">Planned</span></td></tr>
+        <tr><td>Audit</td><td>Refunds, price changes, stock adjustments and settings changes logged with user and time</td></tr>
+        <tr><td>Capacity</td><td>Sized for a single shop: hundreds of products, multiple registers and phones</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="note"><b>Minimum to start trading:</b> one computer on the shop network, one register device with a browser, a QR-capable scanner
+    or phone camera, a direct thermal label printer, and a card reader from the shop's own provider.</div>
+
+  <div class="foot"><span>Your Brand POS · Technical requirements · Version 1 · October 2026</span><span>Items marked Planned are on the roadmap and not yet available.</span></div>
+</section>
+</body>
+</html>

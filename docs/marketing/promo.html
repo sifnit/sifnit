@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<title>Your Brand POS – brochure</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Replace "Your Brand" and the contact block before sending. */
+  :root {
+    --ink: #142031; --muted: #556275; --line: #d6dde7; --accent: #1f6feb;
+    --accent-dark: #0f3f8f; --soft: #eef3fb; --good: #1a7f37;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); font: 10.5pt/1.45 var(--body); background: #fff; }
+  .addons { display: flex; flex-wrap: wrap; gap: 2mm 4mm; align-items: center; font-size: 9.5pt; border: 1px solid var(--line); border-radius: 8px; padding: 3mm 4mm; }
+  .addons b { font-family: var(--display); color: var(--accent-dark); }
+  .addons span:not(.soon)::before { content: "+ "; color: var(--accent); font-weight: 600; }
+  .page { width: 210mm; height: 297mm; padding: 15mm 16mm 12mm; overflow: hidden; position: relative;
+    page-break-after: always; display: flex; flex-direction: column; gap: 6mm; }
+  .page.p2 { gap: 4.5mm; }
+  .page:last-child { page-break-after: auto; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.12; }
+  h1 { font-size: 30pt; font-weight: 800; letter-spacing: -.01em; }
+  h2 { font-size: 15pt; font-weight: 800; }
+  h3 { font-size: 11pt; font-weight: 600; }
+  p { margin: 0; }
+  .brand { display: flex; justify-content: space-between; align-items: center; font-family: var(--display); }
+  .brand .name { font-weight: 800; font-size: 13pt; display: flex; align-items: center; gap: 8px; }
+  .brand .mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); display: inline-block; }
+  .brand .tagline { color: var(--muted); font-size: 9pt; font-family: var(--body); }
+  .hero { display: grid; gap: 4mm; }
+  .hero .sub { font-size: 13pt; color: var(--muted); max-width: 150mm; }
+  .shot { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(20,32,49,.12); }
+  .shot img { display: block; width: 100%; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .benefit { display: grid; gap: 1.5mm; padding-top: 3mm; border-top: 2.5px solid var(--accent); }
+  .benefit p { color: var(--muted); font-size: 9.5pt; }
+  .band { background: var(--soft); border-radius: 10px; padding: 6mm; display: grid; gap: 4mm; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; counter-reset: s; }
+  .step { display: grid; gap: 1.5mm; font-size: 9.5pt; }
+  .step b { font-family: var(--display); font-size: 10.5pt; }
+  .step .n { width: 7mm; height: 7mm; border-radius: 50%; background: var(--accent); color: #fff;
+    font: 600 9pt var(--display); display: grid; place-items: center; }
+  .feat h3 { color: var(--accent-dark); margin-bottom: 1.5mm; }
+  ul { margin: 0; padding-left: 4.5mm; display: grid; gap: 1mm; }
+  li { font-size: 9.5pt; }
+  .soon { display: inline-block; font-size: 7.5pt; font-weight: 600; color: var(--accent-dark); background: var(--soft);
+    border-radius: 99px; padding: 0 2mm; margin-left: 1mm; vertical-align: 1px; }
+  .included { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+  .included div { border: 1px solid var(--line); border-radius: 8px; padding: 3.5mm; font-size: 9.5pt; display: grid; gap: 1mm; align-content: start; }
+  .included b { font-family: var(--display); }
+  .cta { margin-top: auto; background: var(--ink); color: #fff; border-radius: 10px; padding: 5mm 6mm; display: grid;
+    grid-template-columns: 1.4fr 1fr; gap: 6mm; align-items: center; }
+  .cta h2 { color: #fff; }
+  .cta p { color: #c9d3e1; }
+  .cta .contact { font-size: 10pt; line-height: 1.7; color: #fff; }
+  .foot { font-size: 7.5pt; color: var(--muted); }
+  .phones { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
+  .phones .shot { border-radius: 10px; height: 58mm; }
+  .phones .shot img { height: 100%; object-fit: cover; object-position: top; }
+  .tagrow { display: grid; grid-template-columns: 40mm 1fr; gap: 4mm; align-items: center; }
+  .tagrow .shot { box-shadow: none; }
+  .tagrow p { font-size: 9.5pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<section class="page">
+  <div class="brand">
+    <span class="name"><span class="mark"></span>Your Brand POS</span>
+    <span class="tagline">Point of sale for small Australian shops</span>
+  </div>
+
+  <div class="hero">
+    <h1>Scan it. Sell it. Know your stock.<br>No monthly EFTPOS rental.</h1>
+    <p class="sub">A simple counter system for small shops. Scan at the register or with a phone, take cash or card,
+      and see your sales and stock on screen. It runs on a small computer in your shop.</p>
+  </div>
+
+  <div class="shot"><img src="shot-register.jpg" alt="Register screen with a sale in progress"></div>
+
+  <div class="grid3">
+    <div class="benefit"><h3>No monthly rental</h3>
+      <p>Card payments go through your own Square reader. You pay its per-sale fee only; no terminal rental, no lock-in contract.</p></div>
+    <div class="benefit"><h3>Easy for staff</h3>
+      <p>Big buttons, PIN login, clear change-due screen. New staff are serving customers in minutes.</p></div>
+    <div class="benefit"><h3>Stock on your phone</h3>
+      <p>Receive deliveries and do stocktakes by scanning tags with a phone. No paperwork, no app to install.</p></div>
+    <div class="benefit"><h3>GST done right</h3>
+      <p>Prices include 10% GST, receipts are tax invoices, cash rounds to 5c, and GST totals are ready for your BAS.</p></div>
+    <div class="benefit"><h3>Reports on screen</h3>
+      <p>Today's takings, cash vs card, top sellers, low stock and stock value. Nothing to print.</p></div>
+    <div class="benefit"><h3>Your data stays with you</h3>
+      <p>Everything is stored on your own computer in the shop, with one-click backup.</p></div>
+  </div>
+
+  <div class="band">
+    <h2>How a sale works</h2>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><b>Put it down</b>Customer places items on the counter.</div>
+      <div class="step"><span class="n">2</span><b>It's scanned</b>The bench scanner or camera reads each tag and adds it to the sale.</div>
+      <div class="step"><span class="n">3</span><b>Pay</b>Cash with change shown, card on the reader, or both.</div>
+      <div class="step"><span class="n">4</span><b>Done</b>Receipt printed or on screen. Stock and reports update instantly.</div>
+    </div>
+  </div>
+
+  <p class="foot">Your Brand POS · Designed for Australian retail · GST-inclusive pricing · Works on the shop's own Wi-Fi</p>
+</section>
+
+<!-- PAGE 2 -->
+<section class="page p2">
+  <div class="brand">
+    <span class="name"><span class="mark"></span>Your Brand POS</span>
+    <span class="tagline">What's inside</span>
+  </div>
+
+  <div class="grid2">
+    <div class="feat"><h3>At the counter</h3>
+      <ul>
+        <li>Scan by bench scanner, webcam or phone, or search</li>
+        <li>Cash, card and split payments, with change shown</li>
+        <li>Australian 5c cash rounding handled automatically</li>
+        <li>Receipts as GST tax invoices, printed or on screen</li>
+        <li>Refunds that put items back into stock</li>
+        <li>Warns when a price tag is out of date</li>
+      </ul>
+    </div>
+    <div class="feat"><h3>Stock</h3>
+      <ul>
+        <li>Add products in seconds; codes created for you</li>
+        <li>Receive deliveries by scanning with a phone</li>
+        <li>Stocktake from a phone: scan a tag, type the count</li>
+        <li>Low-stock alerts and full stock history per product</li>
+        <li>Supplier codes kept on every product</li>
+      </ul>
+    </div>
+    <div class="feat"><h3>Tags and scanning</h3>
+      <ul>
+        <li>QR price tags from your label printer or A4 sheets</li>
+        <li>A phone's camera opens stocktake straight from a tag</li>
+        <li>NFC tags read on a counter pad, any way up <span class="soon">Coming</span></li>
+        <li>Hands-free counter: pad and camera <span class="soon">Coming</span></li>
+      </ul>
+    </div>
+    <div class="feat"><h3>Reports and control</h3>
+      <ul>
+        <li>Sales by day or hour, top sellers, takings by cashier</li>
+        <li>Cash vs card totals and GST collected</li>
+        <li>End-of-day cash count shows over or short</li>
+        <li>Owner and cashier PIN logins, plus an activity log</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid2" style="align-items:start">
+    <div class="phones">
+      <div class="shot"><img src="shot-stocktake.jpg" alt="Phone stocktake screen"></div>
+      <div class="shot"><img src="shot-phone.jpg" alt="Phone receiving stock"></div>
+    </div>
+    <div style="display:grid;gap:4mm">
+      <h2>Stock work moves to your phone</h2>
+      <p style="color:var(--muted)">Point your phone at a tag and the stocktake screen opens, ready for the count.
+        Receiving a delivery works the same way. No handheld terminal to buy.</p>
+      <div class="tagrow">
+        <div class="shot"><img src="shot-tag.png" alt="Printed price tag with QR code"></div>
+        <p>Every tag carries the product code, supplier code and price. The register always charges the current price.</p>
+      </div>
+</div>
+    </div>
+  </div>
+
+  <div class="addons"><b>Add when you're ready</b><span>Supplier ordering and reorder lists</span><span>Electronic shelf labels</span><span>Card reader linked to the register</span><span class="soon">Coming</span></div>
+
+  <div>
+    <h2 style="margin-bottom:3mm">What's included</h2>
+    <div class="included">
+      <div><b>Setup</b>Installed on a small computer in your shop and connected to your Wi-Fi.</div>
+      <div><b>Your products loaded</b>Products entered and the first tags printed.</div>
+      <div><b>Training</b>Owner and staff shown the register, stock and reports.</div>
+      <div><b>Hardware, if needed</b>Label printer, scanner and computer supplied or specified.</div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div style="display:grid;gap:2mm">
+      <h2>See it running in your shop</h2>
+      <p>Book a demonstration and bring a few of your products. We'll tag them and ring up a sale on the spot.</p>
+    </div>
+    <div class="contact">
+      Your Brand<br>
+      Phone: 0400 000 000<br>
+      Email: hello@yourbrand.com.au<br>
+      Web: yourbrand.com.au
+    </div>
+  </div>
+  <p class="foot">Card payments are processed by the shop's own card provider account; the POS never stores card numbers.
+    Features marked "Coming" are planned and not yet available.</p>
+</section>
+</body>
+</html>
