@@ -308,9 +308,14 @@ without the cashier handling each one, whichever way up they are.
 *Not recommended for now:* UHF RFID reads a whole basket at once from a
 distance, but readers and setup cost far more than a small shop needs.
 
-*Recommendation:* both. Overhead camera for most items, plus an NFC pad for
-face-down, curved or small items. Trial each at the counter before buying in
-bulk.
+*Decided split:*
+- **Small items → NFC pad.** Tag on the base; put it down and it reads, any way up.
+- **Large items → camera QR.** Tag faces up or towards the camera; nothing needs
+  lifting. The overhead camera should cover the whole counter area, and large
+  items' tags go on the top or the side facing the cashier.
+- **Backup → cordless handheld 2D scanner** for anything the camera can't see,
+  then search by name.
+- Trial at the counter before buying labels in bulk.
 
 **Phase 2 — Integrated card payments (optional)**
 - Integrated card reader (Stripe Terminal or Square Terminal)
