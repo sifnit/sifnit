@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reports</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <div class="card no-print" id="filters">
+    <div class="row">
+      <button data-r="today" class="primary">Today</button>
+      <button data-r="yesterday" class="owner-only">Yesterday</button>
+      <button data-r="week" class="owner-only">Last 7 days</button>
+      <button data-r="month" class="owner-only">This month</button>
+      <span class="row owner-only"><input type="date" id="from" style="width:auto"> to <input type="date" id="to" style="width:auto">
+        <button data-r="custom">Show</button></span>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="grid2">
+    <div class="card"><h2 id="timeTitle">Sales by hour</h2><div class="bars" id="timeBars"></div></div>
+    <div class="card"><h2>Top sellers</h2><div class="bars" id="topBars"></div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" id="cashCard">
+      <h2>Cash drawer (today)</h2>
+      <div class="grid2">
+        <div class="field"><label>Opening float ($)</label><input id="float" inputmode="decimal" value="200.00"></div>
+        <div class="field"><label>Cash counted ($)</label><input id="counted" inputmode="decimal" placeholder="0.00"></div>
+      </div>
+      <p>Cash sales today: <b id="cashSales">–</b> · Expected in drawer: <b id="expected">–</b></p>
+      <p id="cashDiff" style="font-size:1.3rem;font-weight:700"></p>
+      <button class="primary" id="saveCash">Save cash-up</button>
+      <div id="cashSaved" class="small" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>Stock</h2>
+      <div class="stats" id="stockStats" style="margin-bottom:8px"></div>
+      <h2 style="margin-top:8px">Low stock</h2>
+      <div class="table-wrap"><table id="low"></table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Sales</h2>
+    <div class="table-wrap"><table id="sales"></table></div>
+  </div>
+  <div class="card owner-only">
+    <h2>By cashier</h2>
+    <table id="cashiers"></table>
+  </div>
+  <div class="card owner-only">
+    <h2>Activity log</h2>
+    <p class="muted small">Refunds, price changes, user and settings changes.</p>
+    <div class="table-wrap"><table id="audit"></table></div>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const m = POS.money;
+let isOwner = false;
+
+const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+function range(r) {
+  const now = new Date();
+  if (r === "yesterday") { const y = new Date(now); y.setDate(y.getDate() - 1); return [iso(y), iso(y)]; }
+  if (r === "week") { const s = new Date(now); s.setDate(s.getDate() - 6); return [iso(s), iso(now)]; }
+  if (r === "month") return [iso(new Date(now.getFullYear(), now.getMonth(), 1)), iso(now)];
+  if (r === "custom") return [$("from").value, $("to").value];
+  return [POS.today(), POS.today()];
+}
+
+const stat = (label, value, sub = "") =>
+  `<div class="stat"><div class="label">${label}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div>`;
+
+function bars(rows, label, value, fmt) {
+  if (!rows.length) return '<p class="muted">No sales in this period.</p>';
+  const max = Math.max(...rows.map(value), 1);
+  return rows.map((r) => `<div class="barrow" title="${POS.esc(label(r))}: ${fmt(r)}">
+    <span class="lbl">${POS.esc(label(r))}</span>
+    <span class="track"><span class="fill" style="display:block;width:${Math.max(0, value(r)) / max * 100}%"></span></span>
+    <span class="num">${fmt(r)}</span></div>`).join("");
+}
+
+async function load(r) {
+  const [from, to] = range(r);
+  if (!from || !to) return POS.toast("Choose both dates", "warn");
+  document.querySelectorAll("#filters button[data-r]").forEach((b) => b.classList.toggle("primary", b.dataset.r === r));
+  const q = `from=${from}&to=${to}`;
+  const [sum, sales] = await Promise.all([
+    POS.api("GET", "/api/reports/summary?" + q),
+    POS.api("GET", "/api/sales?" + q),
+  ]);
+  const t = sum.totals;
+  $("stats").innerHTML =
+    stat("Net sales", m(t.net_cents), `${t.sale_count} sale${t.sale_count === 1 ? "" : "s"}${t.refunds_cents ? ` · refunds ${m(t.refunds_cents)}` : ""}`) +
+    stat("Average sale", m(t.avg_sale_cents)) +
+    stat("Cash", m(t.cash_cents), t.rounding_cents ? `rounding ${m(t.rounding_cents)}` : "") +
+    stat("Card", m(t.card_cents)) +
+    stat("GST collected", m(t.gst_cents), "for your BAS") +
+    (isOwner && t.gross_profit_cents !== undefined ? stat("Gross profit", m(t.gross_profit_cents), "ex GST, where costs entered") : "");
+
+  const multiDay = from !== to;
+  $("timeTitle").textContent = multiDay ? "Sales by day" : "Sales by hour";
+  $("timeBars").innerHTML = multiDay
+    ? bars(sum.daily, (x) => POS.fmtDate(x.day), (x) => x.cents, (x) => m(x.cents))
+    : bars(sum.hourly, (x) => `${String(x.hour).padStart(2, "0")}:00`, (x) => x.cents, (x) => m(x.cents));
+  $("topBars").innerHTML = bars(sum.top, (x) => x.name, (x) => x.sales_cents, (x) => `${m(x.sales_cents)} (${x.qty})`);
+
+  $("sales").innerHTML = '<tr><th>#</th><th>Time</th><th>Items</th><th>Paid</th><th>Cashier</th><th class="num">Total</th></tr>' +
+    (sales.sales.map((s) => `<tr class="click" data-id="${s.id}">
+      <td>${s.id}</td><td>${POS.fmtDate(s.created_at)}</td><td>${s.item_count}</td>
+      <td>${s.payment_method}${s.kind === "refund" ? ' <span class="badge bad">refund</span>' : ""}${s.refunded_by ? ' <span class="badge">refunded</span>' : ""}</td>
+      <td>${POS.esc(s.cashier)}</td><td class="num">${m(s.total_cents)}</td></tr>`).join("")
+      || '<tr><td colspan="6" class="muted">No sales</td></tr>');
+
+  if (isOwner) {
+    $("cashiers").innerHTML = '<tr><th>Cashier</th><th class="num">Sales</th><th class="num">Total</th></tr>' +
+      sum.cashiers.map((c) => `<tr><td>${POS.esc(c.name)}</td><td class="num">${c.count}</td><td class="num">${m(c.cents)}</td></tr>`).join("");
+    const { entries } = await POS.api("GET", "/api/audit?" + q);
+    $("audit").innerHTML = '<tr><th>When</th><th>Who</th><th>What</th></tr>' +
+      (entries.map((e) => `<tr><td>${POS.fmtDate(e.created_at)}</td><td>${POS.esc(e.user || "")}</td>
+        <td>${POS.esc(e.action.replace("_", " "))} <span class="muted">${POS.esc(e.detail)}</span></td></tr>`).join("")
+        || '<tr><td colspan="3" class="muted">Nothing logged</td></tr>');
+  }
+}
+
+$("sales").onclick = (e) => {
+  const row = e.target.closest("tr[data-id]");
+  if (row) window.open("receipt.html?id=" + row.dataset.id, "_blank");
+};
+$("filters").onclick = (e) => {
+  const b = e.target.closest("button[data-r]");
+  if (b) load(b.dataset.r).catch((err) => POS.toast(err.message, "bad"));
+};
+
+async function loadStock() {
+  const s = await POS.api("GET", "/api/reports/stock");
+  const v = s.value;
+  $("stockStats").innerHTML = stat("Units on hand", v.units, `${v.products} products`) +
+    stat("Retail value", m(v.retail_cents)) +
+    (v.cost_cents !== undefined ? stat("Cost value", m(v.cost_cents)) : "");
+  $("low").innerHTML = s.low.length
+    ? '<tr><th>Product</th><th class="num">Stock</th><th class="num">Alert at</th></tr>' +
+      s.low.map((p) => `<tr><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)}</div></td>
+        <td class="num"><span class="badge ${p.stock <= 0 ? "bad" : "warn"}">${p.stock}</span></td><td class="num">${p.reorder_level}</td></tr>`).join("")
+    : '<tr><td class="muted">Nothing is low on stock.</td></tr>';
+}
+
+let cashSales = 0;
+async function loadCash() {
+  const c = await POS.api("GET", "/api/cashup");
+  cashSales = c.cash_sales_cents;
+  $("cashSales").textContent = m(cashSales);
+  try { $("float").value = localStorage.getItem("pos_float") || $("float").value; } catch (e) {}
+  updateCash();
+  $("cashSaved").innerHTML = c.saved.map((s) => `Saved ${POS.fmtDate(s.created_at)} by ${POS.esc(s.user)}:
+    counted ${m(s.counted_cents)}, expected ${m(s.expected_cents)},
+    <b>${s.diff_cents === 0 ? "balanced" : (s.diff_cents > 0 ? "over " : "short ") + m(Math.abs(s.diff_cents))}</b>`).join("<br>");
+}
+function updateCash() {
+  const fl = POS.parseMoney($("float").value) ?? 0;
+  $("expected").textContent = m(fl + cashSales);
+  const counted = POS.parseMoney($("counted").value);
+  const el = $("cashDiff");
+  if (counted === null) { el.textContent = ""; return; }
+  const d = counted - (fl + cashSales);
+  el.textContent = d === 0 ? "Drawer balances ✓" : (d > 0 ? "Over by " : "Short by ") + m(Math.abs(d));
+  el.style.color = d === 0 ? "var(--good)" : d > 0 ? "var(--warn)" : "var(--bad)";
+}
+$("float").addEventListener("input", updateCash);
+$("counted").addEventListener("input", updateCash);
+$("saveCash").onclick = async () => {
+  const fl = POS.parseMoney($("float").value);
+  const counted = POS.parseMoney($("counted").value);
+  if (fl === null || counted === null) return POS.toast("Enter the float and the cash counted", "bad");
+  try { localStorage.setItem("pos_float", $("float").value); } catch (e) {}
+  try {
+    await POS.api("POST", "/api/cashup", { float_cents: fl, counted_cents: counted });
+    POS.toast("Cash-up saved", "good");
+    loadCash();
+  } catch (e) { POS.toast(e.message, "bad"); }
+};
+
+POS.init().then((me) => {
+  isOwner = me.role === "owner";
+  if (!isOwner) document.querySelectorAll(".owner-only").forEach((el) => el.remove());
+  $("from").value = $("to").value = POS.today();
+  load("today");
+  loadStock();
+  loadCash();
+}).catch((e) => POS.toast(e.message, "bad"));
+</script>
+</body>
+</html>

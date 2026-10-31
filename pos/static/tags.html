@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print Tags</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+<style>
+  .tag {
+    background: #fff; color: #000; overflow: hidden; display: flex; gap: 1.5mm; align-items: center;
+    padding: 1.5mm; font-family: system-ui, Arial, sans-serif; break-inside: avoid;
+  }
+  .tag .qr { flex: none; height: 100%; aspect-ratio: 1; }
+  .tag .qr svg { width: 100%; height: 100%; display: block; }
+  .tag .info { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+  .tag .name { font-weight: 600; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .tag .price { font-weight: 800; line-height: 1.05; }
+  .tag .codes { line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #sheet { display: flex; flex-wrap: wrap; gap: 8px; }
+  #sheet.preview .tag { outline: 1px dashed #999; }
+  #sheet.a4 { display: grid; }
+  @media print {
+    #sheet { gap: 0 !important; }
+    #sheet.preview .tag { outline: none; }
+    #sheet.roll .tag { page-break-after: always; }
+  }
+</style>
+<style id="pageStyle"></style>
+</head>
+<body>
+<main>
+  <div class="card no-print">
+    <h1>Print tags</h1>
+    <div class="grid3">
+      <div class="field"><label>Label size</label>
+        <select id="size">
+          <option value="62x29">62 × 29 mm (Brother QL DK-11209)</option>
+          <option value="90x29">90 × 29 mm (Brother QL DK-11201)</option>
+          <option value="57x32">57 × 32 mm (Dymo 11354)</option>
+          <option value="50x25">50 × 25 mm (thermal roll)</option>
+          <option value="40x30">40 × 30 mm (thermal roll)</option>
+          <option value="a4-21">A4 sheet, 21 per page (63.5 × 38.1 mm)</option>
+          <option value="custom">Custom size…</option>
+        </select></div>
+      <div class="field" id="customBox" style="display:none"><label>Width × height (mm)</label>
+        <div class="row"><input id="cw" inputmode="numeric" value="50" style="width:80px"> × <input id="ch" inputmode="numeric" value="30" style="width:80px"></div></div>
+      <div class="field"><label>Copies of each</label><input id="copies" inputmode="numeric" value="1"></div>
+    </div>
+    <div class="field"><label>Products</label>
+      <div class="row">
+        <input id="q" class="grow" placeholder="Search to add products">
+        <button id="allBtn">Add all products</button>
+        <button id="lowBtn">Clear list</button>
+      </div>
+      <div id="results" class="results"></div>
+    </div>
+    <div id="chosen" class="small"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary big" onclick="print()">Print</button>
+      <span class="muted small">In the print dialog choose your label printer, set the paper to the same label size, scale 100% and no margins.</span>
+    </div>
+  </div>
+  <div id="sheet" class="preview"></div>
+</main>
+<script src="vendor/qrcode.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let chosen = [];
+try { $("size").value = localStorage.getItem("pos_tag_size") || "62x29"; } catch (e) {}
+
+function dims() {
+  const v = $("size").value;
+  if (v === "a4-21") return { w: 63.5, h: 38.1, a4: true };
+  if (v === "custom") return { w: Math.max(20, +$("cw").value || 50), h: Math.max(15, +$("ch").value || 30) };
+  const [w, h] = v.split("x").map(Number);
+  return { w, h };
+}
+
+function render() {
+  const { w, h, a4 } = dims();
+  $("customBox").style.display = $("size").value === "custom" ? "" : "none";
+  try { localStorage.setItem("pos_tag_size", $("size").value); } catch (e) {}
+  const copies = Math.max(1, Math.min(100, +$("copies").value || 1));
+  const qrMm = h - 3;
+  const textMm = w - qrMm - 4.5;
+  // font sizes scale with the label height
+  const priceMm = Math.min(h * 0.3, textMm / 4);
+  const nameMm = Math.min(h * 0.14, 3.6);
+  const codeMm = Math.min(h * 0.1, 2.6);
+  $("pageStyle").textContent = a4
+    ? `@page { size: A4; margin: 15mm 7mm 0 7mm; }
+       #sheet.a4 { grid-template-columns: repeat(3, ${w}mm); column-gap: 2.5mm !important; }`
+    : `@page { size: ${w}mm ${h}mm; margin: 0; }`;
+  $("sheet").className = "preview " + (a4 ? "a4" : "roll");
+  const html = [];
+  for (const p of chosen) {
+    const tag = `<div class="tag" style="width:${w}mm;height:${h}mm">
+      <div class="qr">${POS.qrSvg(POS.tagPayload(p))}</div>
+      <div class="info">
+        <div class="name" style="font-size:${nameMm}mm">${POS.esc(p.name)}</div>
+        <div class="price" style="font-size:${priceMm}mm">${POS.money(p.price_cents)}</div>
+        <div class="codes" style="font-size:${codeMm}mm">${POS.esc(p.sku)}${p.vendor_code ? " · " + POS.esc(p.vendor_code) : ""}</div>
+      </div></div>`;
+    for (let i = 0; i < copies; i++) html.push(tag);
+  }
+  $("sheet").innerHTML = html.join("");
+  $("chosen").innerHTML = chosen.length
+    ? `${chosen.length} product(s), ${html.length} tag(s): ` + chosen.map((p, i) =>
+      `<span class="badge">${POS.esc(p.name)} <a href="#" data-i="${i}" aria-label="Remove">✕</a></span>`).join(" ")
+    : '<span class="muted">No products chosen yet.</span>';
+}
+
+$("chosen").onclick = (e) => {
+  const a = e.target.closest("a[data-i]");
+  if (a) { e.preventDefault(); chosen.splice(+a.dataset.i, 1); render(); }
+};
+["size", "copies", "cw", "ch"].forEach((id) => $(id).addEventListener("input", render));
+$("lowBtn").onclick = () => { chosen = []; render(); };
+$("allBtn").onclick = async () => {
+  const { products } = await POS.api("GET", "/api/products");
+  chosen = products;
+  render();
+};
+
+let st;
+$("q").addEventListener("input", () => {
+  clearTimeout(st);
+  st = setTimeout(async () => {
+    const q = $("q").value.trim();
+    if (!q) { $("results").innerHTML = ""; return; }
+    const { products } = await POS.api("GET", "/api/products?q=" + encodeURIComponent(q));
+    $("results").innerHTML = `<table>${products.slice(0, 15).map((p) =>
+      `<tr class="click" data-id="${p.id}"><td>${POS.esc(p.name)}</td><td>${POS.esc(p.sku)}</td><td class="num">${POS.money(p.price_cents)}</td></tr>`).join("")}</table>`;
+    $("results").onclick = (e) => {
+      const row = e.target.closest("tr[data-id]");
+      const p = row && products.find((x) => x.id === +row.dataset.id);
+      if (p && !chosen.some((c) => c.id === p.id)) chosen.push(p);
+      $("results").innerHTML = ""; $("q").value = "";
+      render();
+    };
+  }, 200);
+});
+
+POS.init().then(async () => {
+  const ids = (new URLSearchParams(location.search).get("ids") || "").split(",").filter(Boolean).map(Number);
+  if (ids.length) {
+    const { products } = await POS.api("GET", "/api/products?all=1");
+    chosen = products.filter((p) => ids.includes(p.id));
+  }
+  render();
+});
+</script>
+</body>
+</html>

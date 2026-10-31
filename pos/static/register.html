@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <div class="register">
+    <section>
+      <div class="card">
+        <div class="row">
+          <input id="scan" class="grow" placeholder="Scan a tag, or type a name / SKU" autocomplete="off" autofocus>
+          <button id="camBtn" title="Use a camera pointed at the bench">Camera</button>
+          <button id="miscBtn">Misc item</button>
+        </div>
+        <div id="results" class="results"></div>
+        <div id="camWrap" class="hidden" style="margin-top:12px;max-width:420px"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2>Sale</h2>
+          <button id="clearBtn" class="small">Clear sale</button>
+        </div>
+        <div id="cart"></div>
+        <p id="emptyCart" class="muted">Scan items to start a sale.</p>
+      </div>
+    </section>
+    <aside class="card">
+      <div class="muted">Total</div>
+      <div class="total-box" id="total">$0.00</div>
+      <div class="muted small" style="text-align:right" id="gstLine">Includes GST $0.00</div>
+      <div class="muted small" style="text-align:right" id="cashLine"></div>
+      <div style="display:grid;gap:10px;margin-top:16px">
+        <button id="payBtn" class="primary big" disabled>Pay</button>
+      </div>
+      <p class="muted small" style="margin-top:16px">
+        Bench scanner: just scan, no need to click first.
+      </p>
+      <div id="lastSale" class="small"></div>
+    </aside>
+  </div>
+</main>
+<script src="vendor/jsQR.js"></script>
+<script src="common.js"></script>
+<script src="scanner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem("pos_cart") || "[]"); } catch (e) { cart = []; }
+
+const gstOf = (c) => Math.sign(c) * Math.floor((Math.abs(c) + 5) / 11);
+const roundCash = (c) => Math.floor((c + 2) / 5) * 5;
+
+function totals() {
+  const subtotal = cart.reduce((s, l) => s + l.price_cents * l.qty, 0);
+  const gst = cart.reduce((s, l) => s + (l.gst_free ? 0 : gstOf(l.price_cents * l.qty)), 0);
+  return { subtotal, gst, cash: roundCash(subtotal) };
+}
+
+function save() {
+  try { localStorage.setItem("pos_cart", JSON.stringify(cart)); } catch (e) {}
+}
+
+function render() {
+  save();
+  $("cart").innerHTML = cart.map((l, i) => `
+    <div class="cart-line">
+      <div><div class="name">${POS.esc(l.name)}</div>
+        <div class="muted small">${POS.esc(l.sku || "misc")} · ${POS.money(l.price_cents)} each</div></div>
+      <div class="qty">
+        <button data-i="${i}" data-d="-1" aria-label="Less">−</button><span>${l.qty}</span>
+        <button data-i="${i}" data-d="1" aria-label="More">+</button>
+      </div>
+      <div class="num" style="min-width:80px;font-weight:700">${POS.money(l.price_cents * l.qty)}</div>
+    </div>`).join("");
+  $("emptyCart").classList.toggle("hidden", cart.length > 0);
+  const t = totals();
+  $("total").textContent = POS.money(t.subtotal);
+  $("gstLine").textContent = "Includes GST " + POS.money(t.gst);
+  $("cashLine").textContent = t.cash !== t.subtotal ? "Cash (rounded): " + POS.money(t.cash) : "";
+  $("payBtn").disabled = cart.length === 0;
+}
+
+$("cart").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-i]");
+  if (!b) return;
+  const l = cart[+b.dataset.i];
+  l.qty += +b.dataset.d;
+  if (l.qty <= 0) cart.splice(+b.dataset.i, 1);
+  render();
+});
+
+function addProduct(p) {
+  const existing = cart.find((l) => l.product_id === p.id);
+  if (existing) existing.qty += 1;
+  else cart.push({ product_id: p.id, sku: p.sku, name: p.name, price_cents: p.price_cents, gst_free: !!p.gst_free, qty: 1 });
+  render();
+  if (p.stock <= 0) POS.toast(`${p.name}: stock shows ${p.stock}`, "warn");
+}
+
+let busy = false;
+async function handleCode(code) {
+  if (busy || document.querySelector(".modal-bg")) return;
+  busy = true;
+  try {
+    const r = await POS.api("GET", "/api/products/lookup?code=" + encodeURIComponent(code));
+    if (!r.product.active) throw new Error(`${r.product.name} is archived`);
+    POS.beep(true);
+    addProduct(r.product);
+    if (r.tag_outdated) {
+      POS.toast(`Tag shows ${POS.money(r.tag_price_cents)} but price is now ${POS.money(r.product.price_cents)} - reprint tag`, "warn");
+    }
+    $("results").innerHTML = "";
+    $("scan").value = "";
+  } catch (e) {
+    POS.beep(false);
+    POS.toast(e.message, "bad");
+  } finally {
+    busy = false;
+  }
+}
+
+// Typing searches by name; Enter (from a scanner or the keyboard) looks up the code.
+let searchTimer;
+$("scan").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  const q = $("scan").value.trim();
+  if (q.length < 2 || q.includes("|")) { $("results").innerHTML = ""; return; }
+  searchTimer = setTimeout(async () => {
+    const { products } = await POS.api("GET", "/api/products?q=" + encodeURIComponent(q));
+    $("results").innerHTML = products.length ? `<table>${products.slice(0, 20).map((p) => `
+      <tr class="click" data-id="${p.id}"><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)}</div></td>
+      <td class="num">${POS.money(p.price_cents)}</td></tr>`).join("")}</table>` : '<p class="muted">No matches</p>';
+    $("results").onclick = (e) => {
+      const row = e.target.closest("tr[data-id]");
+      const p = row && products.find((x) => x.id === +row.dataset.id);
+      if (p) { addProduct(p); $("results").innerHTML = ""; $("scan").value = ""; $("scan").focus(); }
+    };
+  }, 200);
+});
+$("scan").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && $("scan").value.trim()) {
+    e.preventDefault();
+    handleCode($("scan").value.trim());
+  }
+});
+attachKeyboardScanner(handleCode, { field: $("scan") });
+
+let cam;
+$("camBtn").onclick = async () => {
+  const wrap = $("camWrap");
+  if (cam?.running) {
+    cam.stop();
+    wrap.classList.add("hidden");
+    $("camBtn").textContent = "Camera";
+    return;
+  }
+  wrap.classList.remove("hidden");
+  cam = cam || new CameraScanner(wrap, handleCode);
+  try {
+    await cam.start();
+    $("camBtn").textContent = "Stop camera";
+  } catch (e) {
+    wrap.classList.add("hidden");
+    POS.toast(e.message, "bad");
+  }
+};
+
+$("clearBtn").onclick = () => {
+  if (cart.length && confirm("Clear this sale?")) { cart = []; render(); }
+};
+
+$("miscBtn").onclick = () => {
+  const m = POS.modal(`<h2>Misc item</h2>
+    <div class="field"><label>Description</label><input id="mName" value="Misc item" maxlength="60"></div>
+    <div class="field"><label>Price (incl. GST)</label><input id="mPrice" inputmode="decimal" placeholder="0.00"></div>
+    <div class="field"><label><input type="checkbox" id="mFree"> GST-free</label></div>
+    <div class="row"><button class="primary grow" id="mAdd">Add</button><button id="mCancel">Cancel</button></div>`);
+  m.el.querySelector("#mPrice").focus();
+  m.el.querySelector("#mCancel").onclick = m.close;
+  m.el.querySelector("#mAdd").onclick = () => {
+    const price = POS.parseMoney(m.el.querySelector("#mPrice").value);
+    if (!price) return POS.toast("Enter a price", "bad");
+    cart.push({ product_id: null, sku: "", name: m.el.querySelector("#mName").value.trim() || "Misc item",
+      price_cents: price, gst_free: m.el.querySelector("#mFree").checked, qty: 1 });
+    render();
+    m.close();
+  };
+};
+
+$("payBtn").onclick = () => {
+  const t = totals();
+  const m = POS.modal(`
+    <h2>Payment</h2>
+    <div class="row" style="justify-content:space-between">
+      <span class="muted">Total</span><span class="total-box" style="font-size:2rem">${POS.money(t.subtotal)}</span>
+    </div>
+    <div class="row" style="margin:12px 0">
+      <button class="grow big" data-m="cash">Cash</button>
+      <button class="grow big" data-m="card">Card</button>
+      <button class="grow big" data-m="split">Split</button>
+    </div>
+    <div id="pBody"></div>`);
+  const body = m.el.querySelector("#pBody");
+  let method = null;
+
+  const tenderBlock = (due) => `
+    <div class="field"><label>Cash due ${due !== t.subtotal ? "(rounded to 5c)" : ""}</label>
+      <div class="total-box" style="font-size:1.8rem;text-align:left" id="pDue">${POS.money(due)}</div></div>
+    <div class="quick-cash" id="pQuick"></div>
+    <div class="field" style="margin-top:10px"><label>Cash received</label>
+      <input id="pTender" inputmode="decimal" placeholder="0.00"></div>
+    <div class="muted small">Change</div><div class="change-box" id="pChange">—</div>`;
+
+  function quickButtons(due) {
+    const notes = [due, ...[5, 10, 20, 50, 100].map((n) => n * 100).filter((n) => n > due)].slice(0, 4);
+    const q = body.querySelector("#pQuick");
+    q.innerHTML = notes.map((n, i) => `<button data-v="${n}">${i === 0 ? "Exact" : POS.money(n)}</button>`).join("");
+    q.onclick = (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (b) { body.querySelector("#pTender").value = (b.dataset.v / 100).toFixed(2); update(); }
+    };
+  }
+
+  function cashDue() {
+    if (method === "cash") return roundCash(t.subtotal);
+    if (method === "split") {
+      const card = POS.parseMoney(body.querySelector("#pCard").value) || 0;
+      return card > 0 && card < t.subtotal ? roundCash(t.subtotal - card) : null;
+    }
+    return 0;
+  }
+
+  function update() {
+    const due = cashDue();
+    const done = body.querySelector("#pDone");
+    if (method === "card") { done.disabled = false; return; }
+    if (due === null) { done.disabled = true; body.querySelector("#pDue").textContent = "—"; return; }
+    body.querySelector("#pDue").textContent = POS.money(due);
+    const tender = POS.parseMoney(body.querySelector("#pTender").value);
+    const change = tender === null ? null : tender - due;
+    body.querySelector("#pChange").textContent = change === null || change < 0 ? "—" : POS.money(change);
+    done.disabled = change === null || change < 0;
+  }
+
+  m.el.querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => {
+    method = b.dataset.m;
+    m.el.querySelectorAll("button[data-m]").forEach((x) => x.classList.toggle("primary", x === b));
+    if (method === "card") {
+      body.innerHTML = `<p>Charge <b>${POS.money(t.subtotal)}</b> on the card reader.
+        When it's approved, tap <b>Approved</b>.</p>
+        <div class="field"><label>Reader reference (optional)</label><input id="pRef" maxlength="40"></div>`;
+    } else if (method === "cash") {
+      body.innerHTML = tenderBlock(roundCash(t.subtotal));
+      quickButtons(roundCash(t.subtotal));
+    } else {
+      body.innerHTML = `<div class="field"><label>Amount on card</label><input id="pCard" inputmode="decimal" placeholder="0.00"></div>
+        <div class="field"><label>Reader reference (optional)</label><input id="pRef" maxlength="40"></div>` + tenderBlock(0);
+      body.querySelector("#pCard").addEventListener("input", () => {
+        const due = cashDue();
+        if (due !== null) quickButtons(due);
+        update();
+      });
+    }
+    body.insertAdjacentHTML("beforeend", `<button class="good big" id="pDone" style="width:100%;margin-top:12px" disabled>
+      ${method === "card" ? "Approved - complete sale" : "Complete sale"}</button>`);
+    body.querySelector("#pTender")?.addEventListener("input", update);
+    body.querySelector("#pDone").onclick = complete;
+    update();
+    (body.querySelector("#pCard") || body.querySelector("#pTender"))?.focus();
+  });
+
+  async function complete() {
+    const btn = body.querySelector("#pDone");
+    btn.disabled = true;
+    const payment = { method, card_ref: body.querySelector("#pRef")?.value || "" };
+    if (method !== "card") payment.tendered_cents = POS.parseMoney(body.querySelector("#pTender").value);
+    if (method === "split") payment.card_cents = POS.parseMoney(body.querySelector("#pCard").value);
+    try {
+      const { sale } = await POS.api("POST", "/api/sales", {
+        items: cart.map((l) => ({ product_id: l.product_id, name: l.name, price_cents: l.price_cents, qty: l.qty, gst_free: l.gst_free })),
+        payment,
+      });
+      cart = [];
+      render();
+      m.el.innerHTML = `<h2>Sale complete</h2>
+        ${sale.change_cents ? `<div class="muted">Change</div><div class="change-box">${POS.money(sale.change_cents)}</div>` : ""}
+        <div class="row" style="margin-top:16px">
+          <a class="btn grow" href="receipt.html?id=${sale.id}&print=1" target="_blank">Print receipt</a>
+          <button class="primary grow" id="pNew">New sale</button>
+        </div>`;
+      m.el.querySelector("#pNew").onclick = () => { m.close(); $("scan").focus(); };
+      m.el.querySelector("#pNew").focus();
+      $("lastSale").innerHTML = `Last sale #${sale.id}: ${POS.money(sale.total_cents)} ·
+        <a href="receipt.html?id=${sale.id}" target="_blank">receipt</a>`;
+    } catch (e) {
+      POS.toast(e.message, "bad");
+      btn.disabled = false;
+    }
+  }
+};
+
+POS.init().then(render);
+</script>
+</body>
+</html>

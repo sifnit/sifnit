@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main style="max-width:800px">
+  <div class="card">
+    <h2>Shop details (shown on receipts)</h2>
+    <div class="grid2">
+      <div class="field"><label>Shop name</label><input id="shop_name" maxlength="200"></div>
+      <div class="field"><label>ABN (receipts say "Tax invoice" once set)</label><input id="abn" maxlength="20"></div>
+      <div class="field"><label>Address</label><input id="address" maxlength="200"></div>
+      <div class="field"><label>Phone</label><input id="phone" maxlength="40"></div>
+      <div class="field"><label>Receipt footer</label><input id="receipt_footer" maxlength="200"></div>
+      <div class="field"><label>Receipt paper width</label>
+        <select id="receipt_width_mm"><option value="58">58 mm</option><option value="62">62 mm (Brother QL)</option><option value="80">80 mm</option></select></div>
+      <div class="field"><label>Time zone</label>
+        <select id="timezone">
+          <option>Australia/Sydney</option><option>Australia/Melbourne</option><option>Australia/Brisbane</option>
+          <option>Australia/Adelaide</option><option>Australia/Darwin</option><option>Australia/Perth</option>
+          <option>Australia/Hobart</option>
+        </select></div>
+      <div class="field"><label>Default low-stock alert level</label><input id="low_stock_default" inputmode="numeric"></div>
+    </div>
+    <button class="primary" id="saveSettings">Save</button>
+  </div>
+
+  <div class="card">
+    <h2>Staff</h2>
+    <table id="users"></table>
+    <h2 style="margin-top:16px">Add staff member</h2>
+    <div class="grid3">
+      <div class="field"><label>Name</label><input id="nName" maxlength="40"></div>
+      <div class="field"><label>Role</label><select id="nRole"><option value="cashier">Cashier</option><option value="owner">Owner</option></select></div>
+      <div class="field"><label>PIN (4-12 digits)</label><input id="nPin" inputmode="numeric" maxlength="12"></div>
+    </div>
+    <button class="primary" id="addUser">Add</button>
+  </div>
+
+  <div class="card">
+    <h2>Backup</h2>
+    <p class="muted">Downloads a copy of all products, sales and settings. Keep it somewhere safe.</p>
+    <a class="btn" href="/api/backup">Download backup</a>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const KEYS = ["shop_name", "abn", "address", "phone", "receipt_footer", "receipt_width_mm", "timezone", "low_stock_default"];
+
+async function load() {
+  const { settings, users } = await POS.api("GET", "/api/settings");
+  KEYS.forEach((k) => $(k).value = settings[k] ?? "");
+  $("users").innerHTML = '<tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr>' + users.map((u) => `
+    <tr><td>${POS.esc(u.name)}</td><td>${u.role}</td>
+      <td>${u.active ? '<span class="badge good">active</span>' : '<span class="badge">disabled</span>'}</td>
+      <td class="row">
+        <button class="small" data-act="pin" data-id="${u.id}">Change PIN</button>
+        <button class="small" data-act="role" data-id="${u.id}" data-role="${u.role}">Make ${u.role === "owner" ? "cashier" : "owner"}</button>
+        <button class="small" data-act="active" data-id="${u.id}" data-active="${u.active}">${u.active ? "Disable" : "Enable"}</button>
+      </td></tr>`).join("");
+}
+
+$("users").onclick = async (e) => {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  const id = b.dataset.id;
+  let body;
+  if (b.dataset.act === "pin") {
+    const pin = prompt("New PIN (4-12 digits):");
+    if (!pin) return;
+    body = { pin };
+  } else if (b.dataset.act === "role") {
+    body = { role: b.dataset.role === "owner" ? "cashier" : "owner" };
+  } else {
+    body = { active: b.dataset.active !== "1" };
+  }
+  try {
+    await POS.api("PUT", "/api/users/" + id, body);
+    POS.toast("Updated", "good");
+    load();
+  } catch (err) { POS.toast(err.message, "bad"); }
+};
+
+$("saveSettings").onclick = async () => {
+  const body = {};
+  KEYS.forEach((k) => body[k] = $(k).value);
+  try {
+    await POS.api("PUT", "/api/settings", body);
+    POS.toast("Saved", "good");
+  } catch (e) { POS.toast(e.message, "bad"); }
+};
+
+$("addUser").onclick = async () => {
+  try {
+    await POS.api("POST", "/api/users", { name: $("nName").value, role: $("nRole").value, pin: $("nPin").value });
+    $("nName").value = $("nPin").value = "";
+    POS.toast("Staff member added", "good");
+    load();
+  } catch (e) { POS.toast(e.message, "bad"); }
+};
+
+POS.init().then((me) => {
+  if (me.role !== "owner") { location.href = "register.html"; return; }
+  load();
+});
+</script>
+</body>
+</html>

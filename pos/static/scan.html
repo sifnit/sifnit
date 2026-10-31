@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scan Stock</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main style="max-width:560px">
+  <div class="card">
+    <div class="row" id="modes">
+      <button class="grow primary" data-mode="lookup">Price check</button>
+      <button class="grow" data-mode="receive">Receive</button>
+      <button class="grow" data-mode="count">Stocktake</button>
+    </div>
+    <p class="muted small" id="modeHelp" style="margin:10px 0 0"></p>
+  </div>
+  <div class="card">
+    <div id="cam"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="camBtn" class="primary grow">Start camera</button>
+      <input id="manual" class="grow" placeholder="…or type SKU" autocomplete="off">
+    </div>
+  </div>
+  <div id="panel"></div>
+</main>
+<script src="vendor/jsQR.js"></script>
+<script src="common.js"></script>
+<script src="scanner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const HELP = {
+  lookup: "Scan a tag to see price and stock.",
+  receive: "Scan each item as it arrives. Each scan adds 1; adjust before saving.",
+  count: "Scan everything on the shelf. When finished, review the differences and apply.",
+};
+let mode = "lookup";
+let receiving = new Map(); // id -> {product, qty}
+let counting = new Map();  // id -> {product, counted}
+let isOwner = false;
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("#modes button").forEach((b) => b.classList.toggle("primary", b.dataset.mode === m));
+  $("modeHelp").textContent = HELP[m];
+  renderPanel();
+}
+$("modes").onclick = (e) => { const b = e.target.closest("button[data-mode]"); if (b) setMode(b.dataset.mode); };
+
+let lastLookup = null;
+function renderPanel() {
+  const panel = $("panel");
+  if (mode === "lookup") {
+    const r = lastLookup;
+    panel.innerHTML = r ? `<div class="card">
+      <h2>${POS.esc(r.product.name)}</h2>
+      <div class="stats" style="margin:0">
+        <div class="stat"><div class="label">Price</div><div class="value">${POS.money(r.product.price_cents)}</div></div>
+        <div class="stat"><div class="label">In stock</div><div class="value">${r.product.stock}</div></div>
+      </div>
+      <p class="muted small">${POS.esc(r.product.sku)}${r.product.vendor_code ? " · vendor " + POS.esc(r.product.vendor_code) : ""}</p>
+      ${r.tag_outdated ? `<p><span class="badge warn">Tag out of date</span> Tag says ${POS.money(r.tag_price_cents)} – reprint it.</p>` : ""}
+    </div>` : "";
+    return;
+  }
+  const map = mode === "receive" ? receiving : counting;
+  const rows = [...map.values()];
+  const lines = rows.map(({ product: p, qty, counted }) => mode === "receive"
+    ? `<tr><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)} · now ${p.stock}</div></td>
+         <td class="num"><span class="qty"><button data-id="${p.id}" data-d="-1">−</button><span>${qty}</span>
+         <button data-id="${p.id}" data-d="1">+</button></span></td></tr>`
+    : `<tr><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)}</div></td>
+         <td class="num"><span class="qty"><button data-id="${p.id}" data-d="-1">−</button><span>${counted}</span>
+         <button data-id="${p.id}" data-d="1">+</button></span></td>
+         <td class="num">${p.stock}</td>
+         <td class="num">${counted - p.stock === 0 ? '<span class="badge good">OK</span>'
+            : `<span class="badge ${counted < p.stock ? "bad" : "warn"}">${counted - p.stock > 0 ? "+" : ""}${counted - p.stock}</span>`}</td></tr>`).join("");
+  panel.innerHTML = `<div class="card">
+    <h2>${mode === "receive" ? "Receiving" : "Stocktake"} (${rows.length} product${rows.length === 1 ? "" : "s"})</h2>
+    ${rows.length ? `<table>${mode === "count" ? '<tr><th>Product</th><th class="num">Counted</th><th class="num">System</th><th class="num">Diff</th></tr>' : ""}${lines}</table>` : '<p class="muted">Nothing scanned yet.</p>'}
+    ${mode === "receive" ? '<div class="field" style="margin-top:12px"><label>Note (supplier, invoice no.)</label><input id="note" maxlength="120"></div>' : ""}
+    <div class="row" style="margin-top:12px">
+      <button class="good grow" id="saveBtn" ${rows.length ? "" : "disabled"}>${mode === "receive" ? "Add to stock" : "Apply counts"}</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    ${mode === "count" && !isOwner ? '<p class="muted small">Only an owner can apply stocktake counts.</p>' : ""}
+  </div>`;
+  panel.querySelector("table")?.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-id]");
+    if (!b) return;
+    const entry = map.get(+b.dataset.id);
+    if (mode === "receive") { entry.qty = Math.max(0, entry.qty + +b.dataset.d); if (!entry.qty) map.delete(+b.dataset.id); }
+    else entry.counted = Math.max(0, entry.counted + +b.dataset.d);
+    renderPanel();
+  });
+  $("clearBtn").onclick = () => { if (confirm("Clear the list?")) { map.clear(); renderPanel(); } };
+  $("saveBtn").onclick = save;
+  if (mode === "count" && !isOwner) $("saveBtn").disabled = true;
+}
+
+async function save() {
+  $("saveBtn").disabled = true;
+  try {
+    if (mode === "receive") {
+      const note = $("note").value;
+      for (const { product, qty } of receiving.values()) {
+        await POS.api("POST", "/api/stock/receive", { product_id: product.id, qty, note });
+      }
+      POS.toast(`Received ${receiving.size} product(s)`, "good");
+      receiving.clear();
+    } else {
+      for (const { product, counted } of counting.values()) {
+        await POS.api("POST", "/api/stock/count", { product_id: product.id, counted, reason: "stocktake" });
+      }
+      POS.toast(`Stocktake applied to ${counting.size} product(s)`, "good");
+      counting.clear();
+    }
+  } catch (e) { POS.toast(e.message, "bad"); }
+  renderPanel();
+}
+
+async function onCode(code) {
+  try {
+    const r = await POS.api("GET", "/api/products/lookup?code=" + encodeURIComponent(code));
+    POS.beep(true);
+    const p = r.product;
+    if (mode === "lookup") lastLookup = r;
+    else if (mode === "receive") {
+      const e = receiving.get(p.id) || { product: p, qty: 0 };
+      e.qty += 1; receiving.set(p.id, e);
+    } else {
+      const e = counting.get(p.id) || { product: p, counted: 0 };
+      e.counted += 1; counting.set(p.id, e);
+    }
+    if (mode !== "lookup") POS.toast(p.name);
+    renderPanel();
+  } catch (e) {
+    POS.beep(false);
+    POS.toast(e.message, "bad");
+  }
+}
+
+const cam = new CameraScanner($("cam"), onCode, { holdMs: 1200 });
+$("cam").classList.add("hidden");
+$("camBtn").onclick = async () => {
+  if (cam.running) { cam.stop(); $("cam").classList.add("hidden"); $("camBtn").textContent = "Start camera"; return; }
+  try {
+    $("cam").classList.remove("hidden");
+    await cam.start();
+    $("camBtn").textContent = "Stop camera";
+  } catch (e) { $("cam").classList.add("hidden"); POS.toast(e.message, "bad"); }
+};
+$("manual").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && $("manual").value.trim()) { onCode($("manual").value.trim()); $("manual").value = ""; }
+});
+attachKeyboardScanner(onCode, { field: $("manual") });
+
+POS.init().then((me) => { isOwner = me.role === "owner"; setMode("lookup"); });
+</script>
+</body>
+</html>

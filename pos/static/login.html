@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POS Login</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <div class="card login">
+    <h1 id="shop">Log in</h1>
+    <div class="field"><label for="user">Who are you?</label><select id="user"></select></div>
+    <div class="pin-dots" id="dots"></div>
+    <div class="pinpad" id="pad"></div>
+    <button class="primary big" id="go" style="width:100%;margin-top:12px">Log in</button>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+let pin = "";
+const dots = document.getElementById("dots");
+const pad = document.getElementById("pad");
+const show = () => dots.textContent = "•".repeat(pin.length);
+pad.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "OK"].map((k) => `<button data-k="${k}">${k}</button>`).join("");
+pad.onclick = (e) => {
+  const k = e.target.closest("button")?.dataset.k;
+  if (k === undefined) return;
+  if (k === "⌫") pin = pin.slice(0, -1);
+  else if (k === "OK") return login();
+  else if (pin.length < 12) pin += k;
+  show();
+};
+document.addEventListener("keydown", (e) => {
+  if (/^\d$/.test(e.key) && pin.length < 12) { pin += e.key; show(); }
+  else if (e.key === "Backspace") { pin = pin.slice(0, -1); show(); }
+  else if (e.key === "Enter") login();
+});
+document.getElementById("go").onclick = login;
+
+async function login() {
+  const sel = document.getElementById("user");
+  if (!sel.value) return;
+  try {
+    await POS.api("POST", "/api/login", { user_id: +sel.value, pin });
+    try { localStorage.setItem("pos_last_user", sel.value); } catch (e) {}
+    const next = new URLSearchParams(location.search).get("next");
+    location.href = next && next.startsWith("/") && !next.startsWith("//") ? next : "/register.html";
+  } catch (e) {
+    pin = ""; show();
+    POS.toast(e.message, "bad");
+  }
+}
+
+POS.api("GET", "/api/users/public").then(({ users, shop_name }) => {
+  document.getElementById("shop").textContent = shop_name;
+  let last = null;
+  try { last = localStorage.getItem("pos_last_user"); } catch (e) {}
+  document.getElementById("user").innerHTML = users.map((u) =>
+    `<option value="${u.id}" ${String(u.id) === last ? "selected" : ""}>${POS.esc(u.name)}</option>`).join("");
+});
+</script>
+</body>
+</html>

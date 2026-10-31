@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Products</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="row">
+      <input id="q" class="grow" placeholder="Search name, SKU, vendor code, category" autocomplete="off">
+      <label class="row" style="margin:0"><input type="checkbox" id="showAll"> Show archived</label>
+      <button id="addBtn" class="primary owner-only">Add product</button>
+      <button id="tagBtn" class="owner-only">Print tags for selected</button>
+    </div>
+  </div>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr>
+        <th class="owner-only"><input type="checkbox" id="selAll" aria-label="Select all"></th>
+        <th>Product</th><th>SKU</th><th>Vendor</th><th class="num">Price</th>
+        <th class="num owner-only">Cost</th><th class="num">Stock</th><th></th>
+      </tr></thead>
+      <tbody id="list"></tbody>
+    </table>
+    <p id="count" class="muted small"></p>
+  </div>
+</main>
+<script src="vendor/qrcode.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let products = [];
+let isOwner = false;
+
+async function load() {
+  const q = $("q").value.trim();
+  const r = await POS.api("GET", `/api/products?q=${encodeURIComponent(q)}${$("showAll").checked ? "&all=1" : ""}`);
+  products = r.products;
+  $("list").innerHTML = products.map((p) => {
+    const low = p.stock <= p.reorder_level;
+    return `<tr class="click" data-id="${p.id}">
+      ${isOwner ? `<td><input type="checkbox" class="sel" value="${p.id}" aria-label="Select"></td>` : ""}
+      <td>${POS.esc(p.name)}${p.category ? `<div class="muted small">${POS.esc(p.category)}</div>` : ""}
+        ${p.active ? "" : '<span class="badge">archived</span>'}</td>
+      <td>${POS.esc(p.sku)}</td><td>${POS.esc(p.vendor_code)}</td>
+      <td class="num">${POS.money(p.price_cents)}</td>
+      ${isOwner ? `<td class="num">${POS.money(p.cost_cents)}</td>` : ""}
+      <td class="num">${p.stock}</td>
+      <td>${low ? '<span class="badge warn">Low</span>' : ""}</td>
+    </tr>`;
+  }).join("");
+  $("count").textContent = `${products.length} product${products.length === 1 ? "" : "s"}`;
+}
+
+$("list").addEventListener("click", (e) => {
+  if (e.target.matches("input.sel")) return;
+  const row = e.target.closest("tr[data-id]");
+  if (row) openProduct(products.find((p) => p.id === +row.dataset.id));
+});
+
+function openProduct(p) {
+  const isNew = !p;
+  p = p || { name: "", sku: "", vendor_code: "", category: "", price_cents: 0, cost_cents: 0, reorder_level: +POS.settings.low_stock_default || 0, gst_free: 0, active: 1, stock: 0 };
+  const ro = isOwner ? "" : "disabled";
+  const m = POS.modal(`
+    <h2>${isNew ? "New product" : POS.esc(p.name)}</h2>
+    ${!isNew ? `<div class="row" style="margin-bottom:12px">
+      <div style="width:84px">${POS.qrSvg(POS.tagPayload(p))}</div>
+      <div class="muted small">Tag code<br><code>${POS.esc(POS.tagPayload(p))}</code><br>Stock on hand: <b>${p.stock}</b></div>
+    </div>` : ""}
+    <div class="field"><label>Name</label><input id="fName" maxlength="80" value="${POS.esc(p.name)}" ${ro}></div>
+    <div class="grid2">
+      <div class="field"><label>SKU ${isNew ? "(leave blank to auto-number)" : ""}</label>
+        <input id="fSku" maxlength="16" value="${POS.esc(p.sku)}" ${isNew ? "" : "disabled"}></div>
+      <div class="field"><label>Vendor code</label><input id="fVendor" maxlength="20" value="${POS.esc(p.vendor_code)}" ${ro}></div>
+      <div class="field"><label>Price incl. GST ($)</label><input id="fPrice" inputmode="decimal" value="${(p.price_cents / 100).toFixed(2)}" ${ro}></div>
+      ${isOwner ? `<div class="field"><label>Cost ($, optional)</label><input id="fCost" inputmode="decimal" value="${(p.cost_cents / 100).toFixed(2)}"></div>` : ""}
+      <div class="field"><label>Category</label><input id="fCat" maxlength="40" value="${POS.esc(p.category)}" ${ro}></div>
+      <div class="field"><label>Low-stock alert at</label><input id="fReorder" inputmode="numeric" value="${p.reorder_level}" ${ro}></div>
+      ${isNew ? `<div class="field"><label>Starting stock</label><input id="fStock" inputmode="numeric" value="0"></div>` : ""}
+    </div>
+    <div class="field"><label><input type="checkbox" id="fGstFree" ${p.gst_free ? "checked" : ""} ${ro}> GST-free item</label></div>
+    ${!isNew && isOwner ? `<div class="field"><label><input type="checkbox" id="fActive" ${p.active ? "checked" : ""}> Active (untick to archive)</label></div>` : ""}
+    <div class="row">
+      ${isOwner ? '<button class="primary grow" id="fSave">Save</button>' : ""}
+      ${!isNew && isOwner ? `<a class="btn" href="tags.html?ids=${p.id}">Print tag</a>` : ""}
+      ${!isNew ? '<button id="fHist">Stock history</button>' : ""}
+      <button id="fClose">Close</button>
+    </div>
+    <div id="fHistBox"></div>`);
+  const v = (id) => m.el.querySelector(id)?.value;
+  m.el.querySelector("#fClose").onclick = m.close;
+  m.el.querySelector("#fHist")?.addEventListener("click", async () => {
+    const { moves } = await POS.api("GET", "/api/stock/moves?product_id=" + p.id);
+    m.el.querySelector("#fHistBox").innerHTML = `<table style="margin-top:12px">
+      <tr><th>When</th><th>Change</th><th>Why</th><th>Who</th></tr>
+      ${moves.map((x) => `<tr><td>${POS.fmtDate(x.created_at)}</td><td class="num">${x.qty_change > 0 ? "+" : ""}${x.qty_change}</td>
+        <td>${POS.esc(x.reason)}${x.sale_id ? ` <a href="receipt.html?id=${x.sale_id}">#${x.sale_id}</a>` : ""}${x.note ? ` – ${POS.esc(x.note)}` : ""}</td>
+        <td>${POS.esc(x.user || "")}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">No movements yet</td></tr>'}
+    </table>`;
+  });
+  m.el.querySelector("#fSave")?.addEventListener("click", async () => {
+    const price = POS.parseMoney(v("#fPrice"));
+    const cost = POS.parseMoney(v("#fCost") || "0");
+    if (price === null) return POS.toast("Check the price", "bad");
+    if (cost === null) return POS.toast("Check the cost", "bad");
+    const body = {
+      name: v("#fName"), vendor_code: v("#fVendor"), category: v("#fCat"),
+      price_cents: price, cost_cents: cost, reorder_level: +v("#fReorder") || 0,
+      gst_free: m.el.querySelector("#fGstFree").checked,
+    };
+    try {
+      if (isNew) {
+        body.sku = v("#fSku");
+        body.stock = +v("#fStock") || 0;
+        const r = await POS.api("POST", "/api/products", body);
+        POS.toast(`Added ${r.product.name} (${r.product.sku})`, "good");
+      } else {
+        body.active = m.el.querySelector("#fActive").checked;
+        const r = await POS.api("PUT", "/api/products/" + p.id, body);
+        if (r.product.price_cents !== p.price_cents) POS.toast("Price changed - reprint the tag", "warn");
+        else POS.toast("Saved", "good");
+      }
+      m.close();
+      load();
+    } catch (e) { POS.toast(e.message, "bad"); }
+  });
+}
+
+let t;
+$("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(load, 200); });
+$("showAll").onchange = load;
+$("addBtn").onclick = () => openProduct(null);
+$("selAll").onchange = () => document.querySelectorAll("input.sel").forEach((c) => c.checked = $("selAll").checked);
+$("tagBtn").onclick = () => {
+  const ids = [...document.querySelectorAll("input.sel:checked")].map((c) => c.value);
+  if (!ids.length) return POS.toast("Tick the products you want tags for", "warn");
+  location.href = "tags.html?ids=" + ids.join(",");
+};
+
+POS.init().then((me) => {
+  isOwner = me.role === "owner";
+  if (!isOwner) document.querySelectorAll(".owner-only").forEach((el) => el.remove());
+  load();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipt</title>
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+<style>
+  .receipt { background: #fff; color: #000; margin: 0 auto; padding: 4mm; font: 13px/1.35 ui-monospace, Menlo, Consolas, monospace; }
+  .receipt h1 { font-size: 16px; text-align: center; margin: 0; }
+  .receipt .c { text-align: center; }
+  .receipt table td { border: 0; padding: 1px 0; }
+  .receipt .r { text-align: right; white-space: nowrap; }
+  .receipt hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+  .receipt .big td { font-size: 16px; font-weight: 700; }
+  @media print { @page { margin: 0; } .receipt { padding: 2mm; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="row no-print" style="justify-content:center;margin-bottom:12px">
+    <button class="primary" onclick="print()">Print</button>
+    <button id="refundBtn" class="danger hidden">Refund this sale</button>
+    <a class="btn" href="register.html">Back to register</a>
+  </div>
+  <div class="receipt" id="r"></div>
+</main>
+<script src="common.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+(async () => {
+  await POS.init();
+  const { sale: s, settings: st } = await POS.api("GET", "/api/sales/" + encodeURIComponent(params.get("id")));
+  const r = document.getElementById("r");
+  r.style.width = (parseInt(st.receipt_width_mm, 10) || 80) + "mm";
+  const m = POS.money;
+  const isRefund = s.kind === "refund";
+  const title = isRefund ? "REFUND" : (st.abn ? "TAX INVOICE" : "RECEIPT");
+  const payLines = [];
+  if (s.card_cents) payLines.push(["Card", m(s.card_cents)]);
+  if (s.cash_cents) payLines.push(["Cash", m(s.cash_cents)]);
+  if (s.tendered_cents) payLines.push(["Cash received", m(s.tendered_cents)], ["Change", m(s.change_cents)]);
+  if (s.card_ref) payLines.push(["Card ref", POS.esc(s.card_ref)]);
+  r.innerHTML = `
+    <h1>${POS.esc(st.shop_name)}</h1>
+    ${st.address ? `<div class="c">${POS.esc(st.address)}</div>` : ""}
+    ${st.phone ? `<div class="c">${POS.esc(st.phone)}</div>` : ""}
+    ${st.abn ? `<div class="c">ABN ${POS.esc(st.abn)}</div>` : ""}
+    <hr><div class="c"><b>${title}</b></div>
+    <div>${POS.fmtDate(s.created_at)}  #${s.id}</div>
+    <div>Served by ${POS.esc(s.cashier)}</div>
+    ${isRefund ? `<div>Refund of sale #${s.refund_of}</div>` : ""}
+    <hr>
+    <table>${s.items.map((i) => `
+      <tr><td colspan="2">${POS.esc(i.name)}${i.gst_cents === 0 && i.line_total_cents ? " *" : ""}</td></tr>
+      <tr><td>&nbsp; ${i.qty} x ${m(i.unit_price_cents)}</td><td class="r">${m(i.line_total_cents)}</td></tr>`).join("")}
+    </table>
+    <hr>
+    <table>
+      ${s.rounding_cents ? `<tr><td>Subtotal</td><td class="r">${m(s.subtotal_cents)}</td></tr>
+        <tr><td>Rounding</td><td class="r">${m(s.rounding_cents)}</td></tr>` : ""}
+      <tr class="big"><td>TOTAL</td><td class="r">${m(s.total_cents)}</td></tr>
+      <tr><td>Total includes GST</td><td class="r">${m(s.gst_cents)}</td></tr>
+      ${payLines.map(([a, b]) => `<tr><td>${a}</td><td class="r">${b}</td></tr>`).join("")}
+    </table>
+    ${s.items.some((i) => i.gst_cents === 0 && i.line_total_cents) ? '<div class="small">* GST-free item</div>' : ""}
+    ${s.refunded_by ? `<hr><div class="c"><b>REFUNDED</b> (refund #${s.refunded_by})</div>` : ""}
+    <hr><div class="c">${POS.esc(st.receipt_footer)}</div>`;
+
+  const btn = document.getElementById("refundBtn");
+  if (POS.me.role === "owner" && !isRefund && !s.refunded_by) {
+    btn.classList.remove("hidden");
+    btn.onclick = async () => {
+      if (!confirm(`Refund ${m(s.total_cents)} and put the items back in stock?\n\nGive the money back the same way it was paid.`)) return;
+      try {
+        const { sale } = await POS.api("POST", `/api/sales/${s.id}/refund`, { restock: true });
+        location.href = "receipt.html?id=" + sale.id;
+      } catch (e) { POS.toast(e.message, "bad"); }
+    };
+  }
+  if (params.get("print") === "1") setTimeout(() => print(), 300);
+})().catch((e) => POS.toast(e.message, "bad"));
+</script>
+</body>
+</html>

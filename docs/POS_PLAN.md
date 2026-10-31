@@ -1,6 +1,6 @@
 # Lightweight Point-of-Sale (POS) — Plan
 
-Status: **draft plan, not yet built.** Open questions are at the bottom.
+Status: **Phase 1 test version built** — see `pos/README.md`. Open questions are at the bottom.
 
 ## 1. What we're building
 
@@ -180,11 +180,15 @@ drill down:
 - Goal: **avoid monthly EFTPOS terminal rental fees** from the bank.
 - Card provider: decision pending — Square suggested to start (section 6).
 
+- About **100 products**, no existing barcodes: every product gets a small
+  **QR tag** holding `SKU|VENDOR|PRICE`.
+- First build is a test version with no shop branding. Name, ABN and address
+  are entered later in Settings.
+- Built with only the Python standard library and SQLite, so it runs on a
+  Raspberry Pi or mini PC.
+
 ## 13. Remaining questions
 
-1. **Label printer make/model** (for tag templates), and should receipts print
-   on it, or on a separate receipt printer?
+1. **Label printer make/model**, to fine-tune the tag templates. Should receipts
+   print on it, or on a separate receipt printer?
 2. **Hosting:** box in the shop (recommended) or cloud?
-3. Roughly how many products, and how many staff?
-4. Do most products already have manufacturer barcodes?
-5. Business name and ABN for receipts.

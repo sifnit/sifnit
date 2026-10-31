@@ -1,0 +1,12 @@
+# Use Caddy for a trusted HTTPS certificate (no browser warning).
+# 1. Point a domain (e.g. pos.example.com.au) at this computer.
+# 2. Start the POS on localhost only:
+#      python3 server.py --http --host 127.0.0.1 --port 8080
+# 3. Run:  caddy run --config Caddyfile
+#
+# For a shop-only (LAN) setup, use a DNS challenge plugin or a tunnel
+# (Tailscale / Cloudflare Tunnel) so Caddy can still get a certificate.
+
+pos.example.com.au {
+	reverse_proxy 127.0.0.1:8080
+}
