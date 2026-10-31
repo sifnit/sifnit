@@ -23,7 +23,7 @@ import threading
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 try:
     from zoneinfo import ZoneInfo
@@ -48,6 +48,7 @@ DEFAULT_SETTINGS = {
     "timezone": "Australia/Sydney",
     "receipt_width_mm": "80",
     "low_stock_default": "3",
+    "tag_base_url": "",
 }
 
 SCHEMA = """
@@ -184,8 +185,12 @@ def gst_of(cents):
 
 
 def parse_scan(code):
-    """Tag QR codes hold 'SKU|VENDOR|PRICE'; plain SKUs are accepted too."""
-    parts = str(code).strip().split("|")
+    """Tag QR codes hold 'SKU|VENDOR|PRICE', or a link '<base>/t?c=SKU|VENDOR|PRICE'
+    so a phone's own camera app opens the stocktake screen. Plain SKUs work too."""
+    code = str(code).strip()
+    if code.lower().startswith(("http://", "https://")):
+        code = parse_qs(urlparse(code).query).get("c", [""])[0]
+    parts = code.split("|")
     sku = parts[0].strip().upper()
     tag_price = None
     if len(parts) >= 3:
@@ -383,6 +388,13 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def redirect(self, location):
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.security_headers()
+        self.end_headers()
+
     def send_raw(self, r):
         self.send_response(200)
         self.send_header("Content-Type", r.ctype)
@@ -444,6 +456,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def dispatch(self, method):
         url = urlparse(self.path)
+        if url.path == "/t" and method == "GET":
+            # Tag link scanned by a phone's camera app: open the stocktake screen.
+            c = parse_qs(url.query).get("c", [""])[0]
+            return self.redirect("/scan.html?mode=count&code=" + quote(c, safe=""))
         if not url.path.startswith("/api/"):
             if method != "GET":
                 return self.send_json(405, {"error": "Method not allowed"})
@@ -943,6 +959,10 @@ def write_settings(h, conn, user, q, data):
     for key in DEFAULT_SETTINGS:
         if key in data:
             val = req_str(data, key, 200, required=False)
+            if key == "tag_base_url":
+                val = val.rstrip("/")
+                if val and not re.match(r"^https?://[^/\s?#]+$", val):
+                    raise ApiError(400, "Tag web address should look like https://192.168.1.20")
             if key == "timezone" and ZoneInfo:
                 try:
                     ZoneInfo(val)

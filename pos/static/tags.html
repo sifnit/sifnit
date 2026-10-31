@@ -56,6 +56,7 @@
       </div>
       <div id="results" class="results"></div>
     </div>
+    <p id="linkNote" class="small"></p>
     <div id="chosen" class="small"></div>
     <div class="row" style="margin-top:12px">
       <button class="primary big" onclick="print()">Print</button>
@@ -145,6 +146,9 @@ $("q").addEventListener("input", () => {
 });
 
 POS.init().then(async () => {
+  $("linkNote").innerHTML = POS.settings.tag_base_url
+    ? `Tags link to <b>${POS.esc(POS.settings.tag_base_url)}</b> – a phone's camera app opens the stocktake screen.`
+    : '<span class="badge warn">No tag web address</span> Phone camera apps won\'t open the POS from these tags. Set it in <a href="settings.html">Settings</a>.';
   const ids = (new URLSearchParams(location.search).get("ids") || "").split(",").filter(Boolean).map(Number);
   if (ids.length) {
     const { products } = await POS.api("GET", "/api/products?all=1");

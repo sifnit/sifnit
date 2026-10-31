@@ -50,7 +50,8 @@ For a permanent set-up without the warning, use a real certificate. Either:
 | Card payments | Charge the amount on your separate card reader (e.g. Square), then tap **Approved** in the POS. |
 | Refund | Open the sale (Reports → Sales, or the receipt link) and tap **Refund this sale**. Owner only. The items go back into stock. |
 | Receive stock | On a phone: **Scan stock → Receive**. Scan each item, adjust the quantities, then **Add to stock**. |
-| Stocktake | **Scan stock → Stocktake**. Scan everything on the shelf, check the differences, then **Apply counts**. Owner only. |
+| Stocktake | **Scan stock → Stocktake**. Scan a tag, type how many are on the shelf, repeat, then **Apply counts**. Owner only. Scanning a tag with the in-app camera again adds 1. |
+| Stocktake with the phone's own camera | Set **Settings → Tag web address** first, then print tags. Point the phone's normal camera at a tag and tap the link. The stocktake screen opens with that product ready for its count. Each tag you scan joins the same list until you apply it. |
 | End of day | **Reports → Cash drawer**. Enter the float and the cash counted to see if the drawer is over or short, then save. |
 | Backup | **Settings → Download backup**. You can also copy `data/pos.db` while the server is stopped. |
 
@@ -65,7 +66,12 @@ For a permanent set-up without the warning, use a real certificate. Either:
 
 ### Tags
 
-Each QR code holds `SKU|VENDOR|PRICE`, for example `P0001|MUG-BL|14.95`. The
+Each QR code holds `SKU|VENDOR|PRICE`, for example `P0001|MUG-BL|14.95`. When
+**Settings → Tag web address** is set, the code becomes a link such as
+`https://192.168.1.20:8443/t?c=P0001|MUG-BL|14.95`. The phone's camera app opens
+it, and the register and bench scanner still read it as normal. Give the POS
+computer a fixed IP address in your router, otherwise the links stop working
+when the address changes. The
 system always charges the **current price**. If a tag's printed price is out of
 date, the register warns you to reprint it.
 

@@ -28,6 +28,11 @@
         </select></div>
       <div class="field"><label>Default low-stock alert level</label><input id="low_stock_default" inputmode="numeric"></div>
     </div>
+    <div class="field"><label>Tag web address (lets a phone's camera app open the stocktake screen)</label>
+      <div class="row"><input id="tag_base_url" class="grow" maxlength="200" placeholder="https://192.168.1.20:8443">
+        <button id="useHere" type="button">Use this address</button></div>
+      <p class="muted small">Must be the address phones use to reach this POS. Give the POS computer a fixed IP address
+        in your router, and reprint tags if this changes. Leave blank for plain codes.</p></div>
     <button class="primary" id="saveSettings">Save</button>
   </div>
 
@@ -52,7 +57,7 @@
 <script src="common.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-const KEYS = ["shop_name", "abn", "address", "phone", "receipt_footer", "receipt_width_mm", "timezone", "low_stock_default"];
+const KEYS = ["tag_base_url", "shop_name", "abn", "address", "phone", "receipt_footer", "receipt_width_mm", "timezone", "low_stock_default"];
 
 async function load() {
   const { settings, users } = await POS.api("GET", "/api/settings");
@@ -95,6 +100,13 @@ $("saveSettings").onclick = async () => {
     await POS.api("PUT", "/api/settings", body);
     POS.toast("Saved", "good");
   } catch (e) { POS.toast(e.message, "bad"); }
+};
+
+$("useHere").onclick = () => {
+  if (/^(localhost|127\.)/.test(location.hostname)) {
+    return POS.toast("Open Settings from a phone or another computer, not this one's localhost", "warn");
+  }
+  $("tag_base_url").value = location.origin;
 };
 
 $("addUser").onclick = async () => {

@@ -81,8 +81,13 @@ POS.beep = (ok = true) => {
   if (navigator.vibrate) navigator.vibrate(ok ? 40 : [80, 60, 80]);
 };
 
-// What goes inside a tag's QR code: SKU|VENDOR|PRICE
-POS.tagPayload = (p) => `${p.sku}|${p.vendor_code || ""}|${(p.price_cents / 100).toFixed(2)}`;
+// What goes inside a tag's QR code: SKU|VENDOR|PRICE. With a tag web address set
+// it becomes a link, so a phone's own camera app opens the stocktake screen.
+POS.tagPayload = (p) => {
+  const code = `${p.sku}|${p.vendor_code || ""}|${(p.price_cents / 100).toFixed(2)}`;
+  const base = POS.settings?.tag_base_url;
+  return base ? `${base}/t?c=${encodeURIComponent(code).replace(/%7C/g, "|")}` : code;
+};
 
 POS.qrSvg = (text, cellSize = 4) => {
   const qr = qrcode(0, "M");

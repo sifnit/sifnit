@@ -57,6 +57,8 @@ class PureFunctions(unittest.TestCase):
     def test_parse_scan(self):
         self.assertEqual(server.parse_scan("p0001|ACME-1|12.50"), ("P0001", 1250))
         self.assertEqual(server.parse_scan(" P0002 "), ("P0002", None))
+        self.assertEqual(server.parse_scan("https://10.0.0.5:8443/t?c=P0003|V%20X|5.00"), ("P0003", 500))
+        self.assertEqual(server.parse_scan("https://10.0.0.5/t?c=P0004%7CV%7C1.00"), ("P0004", 100))
 
 
 class Api(unittest.TestCase):
@@ -177,6 +179,16 @@ class Api(unittest.TestCase):
         self.assertEqual(cashier.call("GET", "/api/reports/summary?from=2020-01-01&to=2020-01-31")[0], 403)
         # can't remove the last owner
         self.assertEqual(self.owner.call("PUT", f"/api/users/{self.owner_id}", {"role": "cashier"})[0], 400)
+
+    def test_tag_link_redirect_and_setting(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port)
+        c.request("GET", "/t?c=P0001|MUG|14.95")
+        r = c.getresponse()
+        self.assertEqual(r.status, 302)
+        self.assertEqual(r.getheader("Location"), "/scan.html?mode=count&code=P0001%7CMUG%7C14.95")
+        self.assertEqual(self.owner.call("PUT", "/api/settings", {"tag_base_url": "not a url"})[0], 400)
+        s = self.owner.ok("PUT", "/api/settings", {"tag_base_url": "https://192.168.1.20:8443/"})
+        self.assertEqual(s["settings"]["tag_base_url"], "https://192.168.1.20:8443")
 
     def test_static_and_traversal(self):
         c = http.client.HTTPConnection("127.0.0.1", self.port)

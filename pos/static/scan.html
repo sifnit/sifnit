@@ -7,6 +7,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <link rel="stylesheet" href="app.css">
+<style>
+  .cnt { width: 84px; min-height: 44px; text-align: center; font-size: 1.2rem; font-weight: 700; padding: 4px; }
+  tr.fresh td { background: var(--warn-bg); }
+</style>
 </head>
 <body>
 <main style="max-width:560px">
@@ -18,14 +22,14 @@
     </div>
     <p class="muted small" id="modeHelp" style="margin:10px 0 0"></p>
   </div>
+  <div id="panel"></div>
   <div class="card">
     <div id="cam"></div>
     <div class="row" style="margin-top:10px">
-      <button id="camBtn" class="primary grow">Start camera</button>
+      <button id="camBtn" class="primary grow">Scan with camera</button>
       <input id="manual" class="grow" placeholder="…or type SKU" autocomplete="off">
     </div>
   </div>
-  <div id="panel"></div>
 </main>
 <script src="vendor/jsQR.js"></script>
 <script src="common.js"></script>
@@ -35,12 +39,25 @@ const $ = (id) => document.getElementById(id);
 const HELP = {
   lookup: "Scan a tag to see price and stock.",
   receive: "Scan each item as it arrives. Each scan adds 1; adjust before saving.",
-  count: "Scan everything on the shelf. When finished, review the differences and apply.",
+  count: "Scan a tag (here or with the phone's own camera), type how many are on the shelf, then Apply counts. " +
+    "Scanning the same tag here again adds 1.",
 };
 let mode = "lookup";
-let receiving = new Map(); // id -> {product, qty}
-let counting = new Map();  // id -> {product, counted}
 let isOwner = false;
+let freshId = null; // product just scanned - highlighted and focused
+
+// Lists survive page reloads, so each tag scanned with the phone's camera app adds to the same stocktake.
+function loadList(key) {
+  try { return new Map(JSON.parse(localStorage.getItem(key) || "[]")); } catch (e) { return new Map(); }
+}
+const receiving = loadList("pos_receiving"); // id -> {product, qty}
+const counting = loadList("pos_counting");   // id -> {product, counted}
+function persist() {
+  try {
+    localStorage.setItem("pos_receiving", JSON.stringify([...receiving]));
+    localStorage.setItem("pos_counting", JSON.stringify([...counting]));
+  } catch (e) {}
+}
 
 function setMode(m) {
   mode = m;
@@ -50,8 +67,12 @@ function setMode(m) {
 }
 $("modes").onclick = (e) => { const b = e.target.closest("button[data-mode]"); if (b) setMode(b.dataset.mode); };
 
+const diffBadge = (counted, stock) => counted === stock ? '<span class="badge good">OK</span>'
+  : `<span class="badge ${counted < stock ? "bad" : "warn"}">${counted > stock ? "+" : ""}${counted - stock}</span>`;
+
 let lastLookup = null;
 function renderPanel() {
+  persist();
   const panel = $("panel");
   if (mode === "lookup") {
     const r = lastLookup;
@@ -67,38 +88,50 @@ function renderPanel() {
     return;
   }
   const map = mode === "receive" ? receiving : counting;
-  const rows = [...map.values()];
+  const rows = [...map.values()].reverse(); // latest scan at the top
   const lines = rows.map(({ product: p, qty, counted }) => mode === "receive"
-    ? `<tr><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)} · now ${p.stock}</div></td>
+    ? `<tr class="${p.id === freshId ? "fresh" : ""}"><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)} · now ${p.stock}</div></td>
          <td class="num"><span class="qty"><button data-id="${p.id}" data-d="-1">−</button><span>${qty}</span>
          <button data-id="${p.id}" data-d="1">+</button></span></td></tr>`
-    : `<tr><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)}</div></td>
-         <td class="num"><span class="qty"><button data-id="${p.id}" data-d="-1">−</button><span>${counted}</span>
-         <button data-id="${p.id}" data-d="1">+</button></span></td>
-         <td class="num">${p.stock}</td>
-         <td class="num">${counted - p.stock === 0 ? '<span class="badge good">OK</span>'
-            : `<span class="badge ${counted < p.stock ? "bad" : "warn"}">${counted - p.stock > 0 ? "+" : ""}${counted - p.stock}</span>`}</td></tr>`).join("");
+    : `<tr class="${p.id === freshId ? "fresh" : ""}"><td>${POS.esc(p.name)}<div class="muted small">${POS.esc(p.sku)} · system ${p.stock}</div></td>
+         <td class="num"><input class="cnt" type="number" inputmode="numeric" min="0" data-id="${p.id}" value="${counted}" aria-label="Counted"></td>
+         <td class="num" data-diff="${p.id}">${diffBadge(counted, p.stock)}</td>
+         <td><button class="small" data-remove="${p.id}" aria-label="Remove">✕</button></td></tr>`).join("");
   panel.innerHTML = `<div class="card">
     <h2>${mode === "receive" ? "Receiving" : "Stocktake"} (${rows.length} product${rows.length === 1 ? "" : "s"})</h2>
-    ${rows.length ? `<table>${mode === "count" ? '<tr><th>Product</th><th class="num">Counted</th><th class="num">System</th><th class="num">Diff</th></tr>' : ""}${lines}</table>` : '<p class="muted">Nothing scanned yet.</p>'}
+    ${rows.length ? `<table>${mode === "count" ? '<tr><th>Product</th><th class="num">Counted</th><th class="num">Diff</th><th></th></tr>' : ""}${lines}</table>`
+      : `<p class="muted">Nothing scanned yet.</p>`}
     ${mode === "receive" ? '<div class="field" style="margin-top:12px"><label>Note (supplier, invoice no.)</label><input id="note" maxlength="120"></div>' : ""}
     <div class="row" style="margin-top:12px">
-      <button class="good grow" id="saveBtn" ${rows.length ? "" : "disabled"}>${mode === "receive" ? "Add to stock" : "Apply counts"}</button>
+      <button class="good grow big" id="saveBtn" ${rows.length ? "" : "disabled"}>${mode === "receive" ? "Add to stock" : "Apply counts"}</button>
       <button id="clearBtn">Clear</button>
     </div>
     ${mode === "count" && !isOwner ? '<p class="muted small">Only an owner can apply stocktake counts.</p>' : ""}
   </div>`;
-  panel.querySelector("table")?.addEventListener("click", (e) => {
+  const table = panel.querySelector("table");
+  table?.addEventListener("click", (e) => {
+    const rm = e.target.closest("button[data-remove]");
+    if (rm) { map.delete(+rm.dataset.remove); renderPanel(); return; }
     const b = e.target.closest("button[data-id]");
     if (!b) return;
     const entry = map.get(+b.dataset.id);
-    if (mode === "receive") { entry.qty = Math.max(0, entry.qty + +b.dataset.d); if (!entry.qty) map.delete(+b.dataset.id); }
-    else entry.counted = Math.max(0, entry.counted + +b.dataset.d);
+    entry.qty = Math.max(0, entry.qty + +b.dataset.d);
+    if (!entry.qty) map.delete(+b.dataset.id);
     renderPanel();
   });
+  table?.addEventListener("input", (e) => {
+    const inp = e.target.closest("input.cnt");
+    if (!inp) return;
+    const entry = counting.get(+inp.dataset.id);
+    entry.counted = Math.max(0, parseInt(inp.value, 10) || 0);
+    panel.querySelector(`[data-diff="${inp.dataset.id}"]`).innerHTML = diffBadge(entry.counted, entry.product.stock);
+    persist();
+  });
+  table?.addEventListener("focusin", (e) => e.target.matches?.("input.cnt") && e.target.select());
   $("clearBtn").onclick = () => { if (confirm("Clear the list?")) { map.clear(); renderPanel(); } };
   $("saveBtn").onclick = save;
   if (mode === "count" && !isOwner) $("saveBtn").disabled = true;
+  if (freshId && mode === "count") panel.querySelector(`input.cnt[data-id="${freshId}"]`)?.focus();
 }
 
 async function save() {
@@ -106,37 +139,46 @@ async function save() {
   try {
     if (mode === "receive") {
       const note = $("note").value;
-      for (const { product, qty } of receiving.values()) {
+      for (const [id, { product, qty }] of [...receiving]) {
         await POS.api("POST", "/api/stock/receive", { product_id: product.id, qty, note });
+        receiving.delete(id);
       }
-      POS.toast(`Received ${receiving.size} product(s)`, "good");
-      receiving.clear();
+      POS.toast("Stock received", "good");
     } else {
-      for (const { product, counted } of counting.values()) {
-        await POS.api("POST", "/api/stock/count", { product_id: product.id, counted, reason: "stocktake" });
+      let changed = 0;
+      for (const [id, { product, counted }] of [...counting]) {
+        const r = await POS.api("POST", "/api/stock/count", { product_id: product.id, counted, reason: "stocktake" });
+        if (r.change) changed++;
+        counting.delete(id);
       }
-      POS.toast(`Stocktake applied to ${counting.size} product(s)`, "good");
-      counting.clear();
+      POS.toast(`Stocktake saved – ${changed} product(s) adjusted`, "good");
     }
   } catch (e) { POS.toast(e.message, "bad"); }
+  freshId = null;
   renderPanel();
 }
 
-async function onCode(code) {
+// fromLink: opened by the phone's camera app, so the user will type the count rather than scan each unit.
+async function onCode(code, { fromLink = false } = {}) {
   try {
     const r = await POS.api("GET", "/api/products/lookup?code=" + encodeURIComponent(code));
     POS.beep(true);
     const p = r.product;
+    freshId = p.id;
     if (mode === "lookup") lastLookup = r;
     else if (mode === "receive") {
       const e = receiving.get(p.id) || { product: p, qty: 0 };
-      e.qty += 1; receiving.set(p.id, e);
+      e.product = p; e.qty += 1;
+      receiving.delete(p.id); receiving.set(p.id, e);
     } else {
       const e = counting.get(p.id) || { product: p, counted: 0 };
-      e.counted += 1; counting.set(p.id, e);
+      e.product = p; // refresh system stock
+      if (!fromLink) e.counted += 1;
+      counting.delete(p.id); counting.set(p.id, e);
     }
-    if (mode !== "lookup") POS.toast(p.name);
+    if (mode !== "lookup" && !fromLink) POS.toast(p.name);
     renderPanel();
+    if (mode === "count") window.scrollTo(0, 0);
   } catch (e) {
     POS.beep(false);
     POS.toast(e.message, "bad");
@@ -146,7 +188,7 @@ async function onCode(code) {
 const cam = new CameraScanner($("cam"), onCode, { holdMs: 1200 });
 $("cam").classList.add("hidden");
 $("camBtn").onclick = async () => {
-  if (cam.running) { cam.stop(); $("cam").classList.add("hidden"); $("camBtn").textContent = "Start camera"; return; }
+  if (cam.running) { cam.stop(); $("cam").classList.add("hidden"); $("camBtn").textContent = "Scan with camera"; return; }
   try {
     $("cam").classList.remove("hidden");
     await cam.start();
@@ -158,7 +200,15 @@ $("manual").addEventListener("keydown", (e) => {
 });
 attachKeyboardScanner(onCode, { field: $("manual") });
 
-POS.init().then((me) => { isOwner = me.role === "owner"; setMode("lookup"); });
+POS.init().then((me) => {
+  isOwner = me.role === "owner";
+  const params = new URLSearchParams(location.search);
+  setMode(HELP[params.get("mode")] ? params.get("mode") : "lookup");
+  if (params.get("code")) {
+    onCode(params.get("code"), { fromLink: true });
+    history.replaceState(null, "", "scan.html?mode=" + mode); // a refresh shouldn't re-add the tag
+  }
+});
 </script>
 </body>
 </html>
