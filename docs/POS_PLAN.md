@@ -200,6 +200,50 @@ the price changes in the POS. No reprinting tags.
   based, so this check matters.
 - **Rollout:** start with a few labels on one shelf, then extend.
 
+**Phase 1d — Hands-free counter scanning (camera + NFC)**
+
+Goal: the customer puts items on the counter and they are added to the sale
+without the cashier handling each one, whichever way up they are.
+
+*Camera (overhead webcam on a stand)*
+- QR codes read at any rotation, so upside down is fine. A tag that is
+  **face down** can't be seen. Options for that: tags on two sides of the item,
+  or a second camera looking up through a clear acrylic/glass window in the
+  bench.
+- Read **several items in one frame**. Today the camera takes one code at a time.
+- Each code has its own "already counted" timer, so items resting on the bench
+  are counted once and new items are added as they appear.
+- **Identical items:** two identical mugs show identical QR codes, so the camera
+  can't tell "two mugs" from "one mug seen twice". Fix: optional **per-unit
+  serial** on tags (`P0001|MUG-BL|14.95|0007`) so each physical item is counted
+  once. Without serials, the cashier taps + for extra identical items.
+- Hardware: 1080p autofocus USB webcam on an arm, plus even lighting (a small
+  LED panel) to avoid glare on glossy tags. Minimum tag QR size about 20 mm.
+
+*NFC (reader pad on or under the bench)*
+- An NFC sticker on each item (NTAG213/215, a few cents each in bulk) holds the
+  same `SKU|VENDOR|PRICE` link as the QR code.
+- Reads **any way up**, including face down, through packaging.
+- Short range (about 1–4 cm) and **one item at a time**: the item is placed on
+  the pad, beeps, and is moved aside. The pad can sit under a thin benchtop
+  (test the thickness first) with a marked "tap here" spot.
+- Metal items and liquids block NFC. These need "on-metal" tags or just use the
+  QR code.
+- **Works with the current software:** a USB NFC reader in keyboard mode types
+  the tag contents plus Enter, the same as the bench barcode scanner.
+- **Bonus:** phones with NFC (most iPhones and Android) can tap the tag to open
+  the stocktake screen, the same as scanning the QR code.
+- **Writing tags:** add "Write NFC tag" on the Products / Tags screen (works in
+  Chrome on Android), or write them with a USB reader/writer.
+- NFC tag IDs are unique per sticker, which also solves counting identical items.
+
+*Not recommended for now:* UHF RFID reads a whole basket at once from a
+distance, but readers and setup cost far more than a small shop needs.
+
+*Recommendation:* both. Overhead camera for most items, plus an NFC pad for
+face-down, curved or small items. Trial each at the counter before buying in
+bulk.
+
 **Phase 2 — Integrated card payments (optional)**
 - Integrated card reader (Stripe Terminal or Square Terminal)
 - Payment reconciliation report: POS card totals vs provider payouts
@@ -238,3 +282,6 @@ the price changes in the POS. No reprinting tags.
    phone/email with just a reorder list?
 5. **ESL:** labels on every shelf position, or only for selected products?
    Do you already have an ESL brand in mind?
+6. **Counter scanning:** what is the benchtop made of and how thick is it (for an
+   under-bench NFC pad)? Do customers usually put down many identical items at
+   once?
