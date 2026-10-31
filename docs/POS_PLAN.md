@@ -12,7 +12,7 @@ A small, easy-to-use point-of-sale and stock system for a staffed counter
 - **Phones scan stock** with their camera (receiving, stocktake, price checks).
 - **The register scans items placed on the bench** next to it, hands-free.
 - **Printable stock tags** with barcodes, readable by phone cameras and scanners.
-- **Payments:** cash, and credit/debit cards via **PayPal**.
+- **Payments:** cash, and credit/debit cards (provider: see section 6).
 - **Reports live on screen** — no printing needed (export to CSV only if wanted).
 - Light enough to run on a mini PC / Raspberry Pi in the shop, or a small
   cloud server.
@@ -62,27 +62,51 @@ without tags.
    Same item scanned again = qty +1. Edit qty, remove, discount (with permission).
 3. Choose payment: **Cash**, **Card (PayPal)**, or **Split**.
 4. Cash: enter amount tendered → big on-screen "Change due".
-5. Receipt: on screen by default; optional email/SMS link or QR the customer can
-   scan. (Printed receipts optional later.)
+5. Receipt: printed (GST tax invoice, see 6a), or emailed / SMS / QR on request.
 6. Refunds/returns by scanning or looking up the original sale.
 
 Stock levels update automatically with every sale and refund.
 
-## 6. Card payments via PayPal
+## 6. Card payments (Australia)
 
-**Key principle: our system never sees or stores card numbers.** PayPal handles
-the card, which keeps us out of the heavy card-security (PCI) burden.
+**Key principle: our system never sees or stores card numbers.** The payment
+provider handles the card, which keeps us out of the heavy card-security (PCI)
+burden.
 
-Three ways to take cards, simplest first:
+### Is PayPal the best choice? Probably not for in-person sales in Australia
 
-| Option | How it works | Effort |
-|---|---|---|
-| **A. Standalone card reader, recorded manually** | Use PayPal's in-person card reader (PayPal Zettle, where available in your country) with its own app. Cashier taps "Card" in our POS, enters/confirms the PayPal reference. | Low — works on day one |
-| **B. QR pay-on-phone** | POS creates a PayPal order via the PayPal API and shows a QR code. Customer scans it and pays with PayPal or **any credit/debit card as a guest**. POS gets confirmation automatically and completes the sale. | Medium |
-| **C. Fully integrated card reader** | POS sends the amount to the reader automatically. | Depends on what PayPal currently offers in your country — to be confirmed |
+PayPal's in-person card reader (Zettle) does not appear to be officially
+available in Australia, and PayPal's Australian card fees are higher than the
+in-person providers below. PayPal remains useful for **online** payments, but
+for cards at the counter these are better fits — **no monthly fees, no lock-in**:
 
-**Recommendation:** start with **A + cash** so the shop can trade immediately,
-add **B** in phase 2. Investigate **C** once we confirm the country/region.
+| Provider | In-person fee (approx., Oct 2026) | Monthly fee | Reader | Integrates with our POS? |
+|---|---|---|---|---|
+| **Square** | 1.6% flat (accounts opened after 30 May 2024) | None on free plan | Square Reader ~A$65 | Standalone with free Square app; full integration via Square Terminal + Terminal API |
+| **Stripe Terminal** | ~1.65% + A$0.10 | None (A$15/mo only if a reader uses cellular data — not needed on shop Wi-Fi) | WisePad 3 from ~A$89; S700 smart reader ~A$449 | Yes — the POS sends the amount to the reader over the internet; built for custom systems like this one |
+| PayPal | Higher than the above for cards | None | Zettle not confirmed in AU | QR / online checkout only |
+
+*Rates change — confirm on each provider's Australian pricing page before signing up.*
+
+### Recommended approach
+
+| Stage | How it works |
+|---|---|
+| **Day one** | **Square Reader + free Square app**, used beside our POS. Cashier taps "Card" in our POS, charges on the reader, sale is recorded. Cheapest way to start: ~A$65 reader, 1.6% per sale, no monthly fee. |
+| **Later (optional)** | **Fully integrated reader** — Stripe Terminal smart reader or Square Terminal. Our POS sends the exact amount to the reader; no re-keying, no mismatches. Decide once the shop is trading. |
+
+## 6a. Australian specifics
+
+- **GST 10%, prices include GST.** GST component on a receipt = total ÷ 11.
+  GST-free items supported via a per-product flag.
+- **Receipts are tax invoices:** business name, **ABN**, date, items,
+  "Total price includes GST" and the GST amount. Sales over A$1,000 can also
+  record the buyer's name/ABN.
+- **Cash rounding:** cash totals round to the nearest 5c (no 1c/2c coins); card
+  payments are charged to the exact cent. Rounding is tracked in reports.
+- Currency AUD; dates DD/MM/YYYY; Australian timezone.
+- Reports include a **GST summary** per period (sales, GST collected) to help
+  with the BAS.
 
 ## 7. On-screen reports
 
@@ -134,28 +158,32 @@ drill down:
 - Products, categories, SKUs, tag printing
 - Phone camera scanning + bench scanner support
 - Register screen, cash sales, change calculation, refunds
-- Card sales recorded manually (option A)
+- Card sales on a standalone reader, recorded in the POS
+- Printed receipts (tax invoice format), GST summary report
 - Today dashboard, cash drawer end-of-day, low stock
 - HTTPS deployment, users/PINs, backups
 
-**Phase 2 — PayPal integration**
-- PayPal QR payments (option B) with automatic confirmation (webhooks)
-- Payment reconciliation report: POS card totals vs PayPal
+**Phase 2 — Integrated card payments (optional)**
+- Integrated card reader (Stripe Terminal or Square Terminal)
+- Payment reconciliation report: POS card totals vs provider payouts
 
 **Phase 3 — Polish**
 - Full report set, stocktake mode, CSV export
 - Emailed/SMS receipts
-- Integrated card reader (option C) if available
+- PayPal for online orders, if ever needed
 - Offline queue for cloud hosting if chosen
 
-## 12. Open questions
+## 12. Decisions so far
 
-1. **Country/currency?** Decides which PayPal card products are available and
-   how sales tax/VAT/GST is shown.
-2. **Hosting:** box in the shop, or cloud?
-3. **Roughly how many products** and **how many registers/staff?**
-4. Do most products already have **manufacturer barcodes**, or will most need tags?
-5. **Label printer:** do you have one, or plain sheet labels on a normal printer?
-6. Do customers need **receipts** (paper, email, SMS, or none)?
-7. Do prices **include tax**, and are there different tax rates?
-8. Do you already have a **PayPal Business account**?
+- Single shop in **Australia**, AUD, **GST 10% included** in prices.
+- Has a **label printer**; customers get **receipts**.
+- Card provider: decision pending — Square suggested to start (section 6).
+
+## 13. Remaining questions
+
+1. **Label printer make/model** (for tag templates), and should receipts print
+   on it, or on a separate receipt printer?
+2. **Hosting:** box in the shop (recommended) or cloud?
+3. Roughly how many products, and how many staff?
+4. Do most products already have manufacturer barcodes?
+5. Business name and ABN for receipts.
