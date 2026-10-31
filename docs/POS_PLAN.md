@@ -264,6 +264,12 @@ without the cashier handling each one, whichever way up they are.
   scanned and don't match, the register warns.
 - **Later option:** printers that print and encode in one pass exist, but cost
   much more. Only worth it at high volume.
+- **TSC desktop printers** (e.g. TE200/TE210/DA220 class, direct thermal) take
+  generic third-party label rolls, so they suit printable NFC labels. They print
+  only. The NFC chip is written in the separate Encode NFC step. Most TSC "R"
+  (RFID) models are **UHF**, which is not NFC. TSC's HF/NFC encoding options are
+  limited (e.g. a kit for the DH220 healthcare series), and NTAG support isn't
+  confirmed, so they're not needed for this.
 
 *Not recommended for now:* UHF RFID reads a whole basket at once from a
 distance, but readers and setup cost far more than a small shop needs.
