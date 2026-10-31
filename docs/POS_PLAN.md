@@ -264,6 +264,13 @@ without the cashier handling each one, whichever way up they are.
   scanned and don't match, the register warns.
 - **Later option:** printers that print and encode in one pass exist, but cost
   much more. Only worth it at high volume.
+- **Media cost (rough, Oct 2026, confirm with AU suppliers):** plain direct
+  thermal labels about **3–4c each** (e.g. A$17 inc GST per 500 × 50×25 mm);
+  printable NTAG213 NFC labels about **A$0.30–0.45 each** in rolls of
+  1,500–4,500 from overseas web stores (USD 0.20–0.30) plus shipping, or
+  about **A$0.12–0.20** in 10,000+ bulk imports. So NFC adds roughly 10× to tag
+  cost. Use NFC tags only for items that often land face down or are
+  awkward to scan, and plain QR tags for the rest.
 - **TSC desktop printers** (e.g. TE200/TE210/DA220 class, direct thermal) take
   generic third-party label rolls, so they suit printable NFC labels. They print
   only. The NFC chip is written in the separate Encode NFC step. Most TSC "R"
