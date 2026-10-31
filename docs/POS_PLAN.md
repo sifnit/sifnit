@@ -264,6 +264,21 @@ without the cashier handling each one, whichever way up they are.
   scanned and don't match, the register warns.
 - **Later option:** printers that print and encode in one pass exist, but cost
   much more. Only worth it at high volume.
+- **Reading at the register: use the tag's unique ID (UID).** Most cheap USB
+  "keyboard mode" NFC readers type only the tag's UID, not the link stored on
+  it. The Encode NFC step therefore records each tag's UID against the product,
+  and the register looks up UIDs as well as QR codes. Any keyboard-mode reader
+  then works with no extra software, and identical items are counted
+  separately because every UID is different.
+- **Hardware options:**
+  | Role | Option | Rough AU price | Notes |
+  |---|---|---|---|
+  | Print | TSC DA210 (direct thermal only) | to quote | No ribbon needed; enough for paper NFC labels |
+  | Print | TSC TE210 (direct thermal + transfer) | A$424–732 | Ribbon optional; Ethernet/Wi-Fi models |
+  | Write tags | Android phone, Chrome | A$0 if owned | Web NFC; simplest for ~100 products |
+  | Write tags | ACS ACR122U USB | ~A$80 | Needs a small helper on the POS computer |
+  | Read at bench | USB NFC reader, keyboard mode (UID) | ~A$30–80 | Plug-and-play with the register via UID lookup |
+  | Read at bench | ACS ACR122U (PC/SC) | ~A$80 | Reads UID and link; same helper as writing |
 - **Media cost (rough, Oct 2026, confirm with AU suppliers):** plain direct
   thermal labels about **3–4c each** (e.g. A$17 inc GST per 500 × 50×25 mm);
   printable NTAG213 NFC labels about **A$0.30–0.45 each** in rolls of
