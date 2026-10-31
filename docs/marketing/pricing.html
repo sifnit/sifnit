@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<title>Your Brand POS – pricing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  :root { --ink: #142031; --muted: #556275; --line: #d6dde7; --accent: #1f6feb; --accent-dark: #0f3f8f; --soft: #eef3fb;
+    --good: #1a7f37; --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif; }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); font: 10pt/1.45 var(--body); background: #fff; }
+  .page { width: 210mm; height: 297mm; padding: 13mm 16mm 10mm; overflow: hidden; display: flex; flex-direction: column; gap: 5mm; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.12; }
+  h1 { font-size: 24pt; font-weight: 800; }
+  h2 { font-size: 13pt; font-weight: 800; }
+  h3 { font-size: 10.5pt; font-weight: 600; }
+  p { margin: 0; }
+  .brand { display: flex; justify-content: space-between; align-items: center; font-family: var(--display); }
+  .brand .name { font-weight: 800; font-size: 13pt; display: flex; align-items: center; gap: 8px; }
+  .brand .mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); display: inline-block; }
+  .brand .tagline { color: var(--muted); font-size: 9pt; font-family: var(--body); }
+  .lead { color: var(--muted); font-size: 11.5pt; max-width: 160mm; }
+  .plans { display: grid; grid-template-columns: 1.25fr 1fr; gap: 5mm; }
+  .plan { border: 1px solid var(--line); border-radius: 10px; padding: 5mm; display: grid; gap: 2.5mm; align-content: start; }
+  .plan.main { border: 2px solid var(--accent); }
+  .price { font-family: var(--display); font-weight: 800; font-size: 30pt; line-height: 1; }
+  .price small { font-size: 10pt; font-weight: 600; color: var(--muted); font-family: var(--body); }
+  .kicker { font-size: 8.5pt; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-dark); }
+  ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 1.2mm; }
+  li { padding-left: 6mm; position: relative; font-size: 9.5pt; }
+  li::before { content: "✓"; position: absolute; left: 0; color: var(--good); font-weight: 700; }
+  ul.dash li::before { content: "–"; color: var(--muted); }
+  .zero { background: var(--soft); border-radius: 10px; padding: 3.5mm 6mm; display: grid; grid-template-columns: auto 1fr; gap: 6mm; align-items: center; }
+  .zero .big { font-family: var(--display); font-weight: 800; font-size: 28pt; color: var(--accent-dark); line-height: 1; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .box { border: 1px solid var(--line); border-radius: 10px; padding: 5mm; display: grid; gap: 2.5mm; align-content: start; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  td { padding: 1.4mm 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:last-child { text-align: right; white-space: nowrap; color: var(--muted); }
+  .cta { margin-top: auto; background: var(--ink); color: #fff; border-radius: 10px; padding: 5mm 6mm; display: grid; grid-template-columns: 1.4fr 1fr; gap: 6mm; align-items: center; }
+  .cta h2 { color: #fff; }
+  .cta p { color: #c9d3e1; }
+  .cta .contact { font-size: 10pt; line-height: 1.7; }
+  .foot { font-size: 7.5pt; color: var(--muted); }
+</style>
+</head>
+<body>
+<section class="page">
+  <div class="brand">
+    <span class="name"><span class="mark"></span>Your Brand POS</span>
+    <span class="tagline">Pricing · valid from November 2026</span>
+  </div>
+
+  <div style="display:grid;gap:3mm">
+    <h1>One price to set up. Then it's yours.</h1>
+    <p class="lead">Pay once for setup and the system keeps working with no subscription. Add updates and support only if you want them.</p>
+  </div>
+
+  <div class="plans">
+    <div class="plan main">
+      <span class="kicker">Setup</span>
+      <div class="price">$3,000 <small>one-off, inc. GST</small></div>
+      <ul>
+        <li>Software installed on a computer in your shop</li>
+        <li>Connected to your Wi-Fi, secure for phones</li>
+        <li>Up to 100 products loaded, first tags printed</li>
+        <li>Label printer, scanner and register device set up</li>
+        <li>Owner and staff logins, receipts with your ABN</li>
+        <li>Training for owner and staff, on site</li>
+        <li>Help by phone or email for 30 days after go-live</li>
+        <li>Use of the software for as long as you like</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <span class="kicker">Optional</span>
+      <h2>Updates &amp; support plan</h2>
+      <div class="price" style="font-size:18pt">Price on request</div>
+      <p style="color:var(--muted)">Choose it any time. Stop any time; the POS keeps working.</p>
+      <ul>
+        <li>New versions and fixes installed</li>
+        <li>Automatic off-site backups, checked</li>
+        <li>Help line for staff questions</li>
+        <li>Remote fixes where possible</li>
+        <li>New features as they're released</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="zero">
+    <div class="big">$0</div>
+    <div><h3>a month after setup</h3>
+      <p style="color:var(--muted)">No terminal rental, no POS subscription, no lock-in contract. Card fees are paid only to your own card provider (e.g. Square), per sale.</p></div>
+  </div>
+
+  <div class="grid2">
+    <div class="box">
+      <h3>Not included in setup</h3>
+      <ul class="dash">
+        <li>Hardware: use your own if it meets the technical requirements, or we quote a bundle (computer, TSC label printer, scanner)</li>
+        <li>Card reader, from your card provider</li>
+        <li>Label rolls and other consumables</li>
+        <li>Card provider fees (paid to your provider)</li>
+        <li>Products beyond 100, or data from old systems</li>
+        <li>Travel outside our service area</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Add-ons as they become available</h3>
+      <ul class="dash">
+        <li>Supplier ordering and reorder lists</li>
+        <li>NFC tags and hands-free counter scanning</li>
+        <li>Electronic shelf labels</li>
+        <li>Card reader linked to the register</li>
+      </ul>
+      <p style="color:var(--muted);font-size:9pt">Each quoted when released.</p>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div style="display:grid;gap:2mm">
+      <h2>Book a demonstration</h2>
+      <p>See it running with your own products before you decide.</p>
+    </div>
+    <div class="contact">Your Brand<br>Phone: 0400 000 000<br>Email: hello@yourbrand.com.au<br>Web: yourbrand.com.au</div>
+  </div>
+  <p class="foot">Prices in Australian dollars and include GST. Setup price covers one shop with one register. Quote valid 30 days.
+    Card processing is provided by the shop's own card provider under its terms; the POS never stores card numbers.</p>
+</section>
+</body>
+</html>
