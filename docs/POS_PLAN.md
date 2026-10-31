@@ -293,6 +293,18 @@ without the cashier handling each one, whichever way up they are.
   limited (e.g. a kit for the DH220 healthcare series), and NTAG support isn't
   confirmed, so they're not needed for this.
 
+*Large and bulky items*
+- NFC range is only about 1–4 cm whatever the item size, so it's the **tag**
+  that has to reach the pad, not the item.
+- **Tag placement rule:** small items get the tag on the base (put down = read);
+  large items get the tag where it can be presented, or a **swing tag** on a
+  string or loop (QR + NFC label folded over card) that can be lifted to the pad.
+- **Too heavy to lift:** use a **handheld** instead of moving the item: a
+  cordless 2D barcode scanner (reads the QR from 10–50 cm) or a phone with the
+  register page open. Both feed the same sale.
+- **Overhead camera** reads large items fine when the tag faces up or sideways.
+- Fallback for anything awkward: search by name at the register.
+
 *Not recommended for now:* UHF RFID reads a whole basket at once from a
 distance, but readers and setup cost far more than a small shop needs.
 
