@@ -173,6 +173,33 @@ drill down:
   against an order fills in the expected quantities.
 - Last cost price updated on receipt
 
+**Phase 1c — Electronic shelf labels (ESL)**
+
+Small e-ink price labels on the shelf edge that change price automatically when
+the price changes in the POS. No reprinting tags.
+
+- **How it fits:** ESLs sit on the shelf, not on the item. Items still carry
+  their printed QR tag for scanning at the register. The ESL shows the shelf
+  price and can show the same QR link, so phone stocktake works from the shelf too.
+- **Pairing:** on a phone, scan the ESL's own barcode, then the product's QR tag,
+  to link them. Unpair or move a label the same way.
+- **What a label shows:** product name, price incl. GST, SKU / vendor code, QR
+  link. Optional: "SALE" price with the was-price, low-stock flag for staff.
+- **Updates:** any price, name or sale change in the POS is pushed to the label
+  within seconds. Activity log records each push; a screen lists labels that
+  failed to update (e.g. flat battery, out of range).
+- **Coding approach:** an "ESL connector" inside the POS server. It watches
+  product changes and sends them to the ESL system's base station or API. The
+  connector is written per brand, so the brand can change later without
+  touching the rest of the POS.
+- **Before building — choose hardware:** compare ESL brands sold in Australia
+  for (a) a **local base station with an open API** that works without the
+  internet, (b) **no monthly cloud fee** (in line with avoiding EFTPOS-style
+  rental fees), (c) cost per label and base station for about 100 products,
+  (d) label size and battery life. Many ESL systems are cloud-subscription
+  based, so this check matters.
+- **Rollout:** start with a few labels on one shelf, then extend.
+
 **Phase 2 — Integrated card payments (optional)**
 - Integrated card reader (Stripe Terminal or Square Terminal)
 - Payment reconciliation report: POS card totals vs provider payouts
@@ -209,3 +236,5 @@ drill down:
 3. Should **cashiers** be allowed to apply stocktake counts, or owners only?
 4. Do you want **purchase orders** in the system (Phase 1b), or keep ordering by
    phone/email with just a reorder list?
+5. **ESL:** labels on every shelf position, or only for selected products?
+   Do you already have an ESL brand in mind?
