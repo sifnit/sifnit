@@ -10,6 +10,8 @@ browser over HTTPS, so there's nothing to install on phones or the register.
 - **Receipts** shown on screen or printed (58, 62 or 80 mm). They become a "Tax invoice" once an ABN is entered.
 - **Owner and cashier logins** with PINs.
 
+Day-to-day guide (order to sale, stocktake): `docs/OPERATIONS.md`.
+
 This is a test version: the shop name, ABN and address are left blank and set in **Settings**.
 
 ## Requirements

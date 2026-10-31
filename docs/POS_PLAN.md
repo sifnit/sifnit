@@ -154,22 +154,33 @@ drill down:
 
 ## 11. Phased delivery
 
-**Phase 1 — Trade with cash (MVP)**
-- Products, categories, SKUs, tag printing
-- Phone camera scanning + bench scanner support
-- Register screen, cash sales, change calculation, refunds
-- Card sales on a standalone reader, recorded in the POS
-- Printed receipts (tax invoice format), GST summary report
-- Today dashboard, cash drawer end-of-day, low stock
-- HTTPS deployment, users/PINs, backups
+**Phase 1 — Trade with cash and card: BUILT (test version)**
+- [x] Products, categories, auto SKUs, vendor codes, GST-free flag
+- [x] QR tag printing (label printer sizes and A4 sheets)
+- [x] Phone camera scanning and bench scanner support
+- [x] Register: cash (5c rounding, change), card on a standalone reader, split
+- [x] Receipts in tax-invoice format, refunds with restock
+- [x] Reports: sales, cash vs card, GST, top sellers, low stock, stock value, activity log
+- [x] Cash drawer end-of-day count
+- [x] Receiving stock and stocktake from a phone, including from the phone's own
+      camera app via tag links
+- [x] HTTPS, owner/cashier PIN logins, backup download
+- [ ] Trial in the shop with real hardware (phone, bench scanner, label printer)
+
+**Phase 1b — Ordering (next)**
+- Reorder list: everything at or below its alert level, grouped by vendor code
+- Purchase orders: create, send (email or print), mark received. Receiving
+  against an order fills in the expected quantities.
+- Last cost price updated on receipt
 
 **Phase 2 — Integrated card payments (optional)**
 - Integrated card reader (Stripe Terminal or Square Terminal)
 - Payment reconciliation report: POS card totals vs provider payouts
 
 **Phase 3 — Polish**
-- Full report set, stocktake mode, CSV export
+- CSV export for the accountant / BAS
 - Emailed/SMS receipts
+- Part refunds (single items)
 - PayPal for online orders, if ever needed
 - Offline queue for cloud hosting if chosen
 
@@ -187,8 +198,14 @@ drill down:
 - Built with only the Python standard library and SQLite, so it runs on a
   Raspberry Pi or mini PC.
 
+- Phone camera stocktake: scanning a tag with the phone's normal camera opens
+  the stocktake screen (see `docs/OPERATIONS.md`).
+
 ## 13. Remaining questions
 
 1. **Label printer make/model**, to fine-tune the tag templates. Should receipts
    print on it, or on a separate receipt printer?
 2. **Hosting:** box in the shop (recommended) or cloud?
+3. Should **cashiers** be allowed to apply stocktake counts, or owners only?
+4. Do you want **purchase orders** in the system (Phase 1b), or keep ordering by
+   phone/email with just a reorder list?
