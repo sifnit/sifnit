@@ -237,6 +237,34 @@ without the cashier handling each one, whichever way up they are.
   Chrome on Android), or write them with a USB reader/writer.
 - NFC tag IDs are unique per sticker, which also solves counting identical items.
 
+*Combined disposable tags (QR printed on an NFC label)*
+- Use **printable NFC labels**: a paper face with a thin NFC inlay (NTAG213)
+  underneath, supplied on rolls. The label printer prints the QR code, name and
+  price on top as usual. One sticker = QR + NFC, peeled off and thrown away like
+  a normal price tag.
+- **Printer check:** the roll must fit the label printer. Brother QL printers
+  generally take Brother's own rolls only, so NFC rolls usually suit a generic
+  direct-thermal label printer that accepts third-party rolls (e.g. 50 × 30 mm).
+  Test that the printer feeds and prints cleanly over the inlay bump before
+  buying in bulk.
+- **Encoding (writing the NFC part) after printing**, in the POS:
+  1. Print a batch of tags as now.
+  2. Tags screen → **Encode NFC**: the screen shows the first tag in the batch.
+  3. Hold that printed tag to the writer. The POS writes the same link as the
+     QR code, reads it back to check, records the tag's unique ID, and moves to
+     the next tag.
+- **Writer options:**
+  - *Android phone in Chrome* (Web NFC): no extra hardware. Fine for the test
+    and for about 100 products. iPhones can't write from a web page.
+  - *USB NFC reader/writer at the bench* (PC/SC type, e.g. ACR122U class): the
+    POS server talks to it directly. Faster for big batches, but needs one extra
+    Python package on the POS computer.
+- **Mismatch guard:** because the POS writes the NFC chip from the same data as
+  the printed QR code, they can't disagree. If a tag's NFC and QR are ever
+  scanned and don't match, the register warns.
+- **Later option:** printers that print and encode in one pass exist, but cost
+  much more. Only worth it at high volume.
+
 *Not recommended for now:* UHF RFID reads a whole basket at once from a
 distance, but readers and setup cost far more than a small shop needs.
 
