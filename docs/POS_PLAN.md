@@ -177,6 +177,7 @@ drill down:
 
 - Single shop in **Australia**, AUD, **GST 10% included** in prices.
 - Has a **label printer**; customers get **receipts**.
+- Goal: **avoid monthly EFTPOS terminal rental fees** from the bank.
 - Card provider: decision pending — Square suggested to start (section 6).
 
 ## 13. Remaining questions
