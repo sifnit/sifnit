@@ -32,7 +32,7 @@ and ask which project this is instead of guessing.
 | `copy` `content` `seo` `ads` | register, audience, forbidden claims |
 | `ui` `taste` | palette, type, spacing, anti-references |
 | `thumb` `post` `publish` | channel identity, safe zones, end cards |
-| `video` `portrait` `clip` `film` | brand marks, aspect, logo placement |
+| `edit` `video` `portrait` `clip` `film` | brand marks, aspect, logo placement |
 | `remotion` `hyperframes` | palette, fps |
 | `qa` `browse` | local and production URLs |
 | `grill` `react` `postgres` | what kind of product this is |

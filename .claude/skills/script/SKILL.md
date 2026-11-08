@@ -7,11 +7,11 @@ description: Write the words. Use for a YouTube script, voiceover, narration, co
 
 One idea. One hook. Receipts on screen. If the first line needs a setup, it is not a hook.
 
-Load `profile` for the channel's register. Titles and CTAs after the script go to `copy`. Thumbnail line → `thumb`.
+Load `profile` for the channel's register. Titles and CTAs after the script go to `copy`. Thumbnail line → `thumb`. Edit plan and cut list → `edit`.
 
 ## Output (fill this, in this order)
 
-Write the file to the video folder as `script.md`. Use `~/norstack/skills/script/TEMPLATE.md`.
+Write the file to the video folder as `script.md`. Use `TEMPLATE.md` next to this file.
 
 Required slots: Title · HookA/B/C · Promise · Beats · Payoff · Outro · Sources · Thumb line · Description. Missing a slot means the script is not done.
 
@@ -52,7 +52,7 @@ Precise. Slightly dry. Curious. Short sentences. No em dashes. No therapist. No 
 Allowed: the name of the effect, the ugly detail, the limit of the finding.
 Forbidden: diagnose the viewer, treatment advice, invented citations, "it's okay to feel."
 
-If a beat touches clinical territory, the Outro includes a one-line not-advice card. `channel` owns that rule.
+If a beat touches clinical territory, the Outro includes a one-line not-advice card.
 
 ## Titles
 
