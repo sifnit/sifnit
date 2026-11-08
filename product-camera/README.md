@@ -2,6 +2,19 @@
 
 A phone camera web app for consistent product photos. It overlays your last shot, or any reference image, on the live view so you can line up the next product the same way. The overlay is only on screen; saved photos come straight from the camera.
 
+## Run it from your computer
+
+The camera only works over HTTPS, so `serve.py` runs a small HTTPS server with a self-signed certificate. It needs Python 3, plus either `pip install cryptography` or the `openssl` command.
+
+```bash
+cd product-camera
+python3 serve.py
+```
+
+It prints an address like `https://192.168.1.20:8443`. Open that in Chrome on your phone, on the same Wi-Fi. Chrome warns that the connection isn't private because the certificate is self-signed: tap **Advanced**, then **Proceed**. Chrome remembers that choice for the address.
+
+If your computer gets a new network address, the script makes a new certificate and you tap through the warning once more. On a self-signed certificate, Chrome won't install the app or cache it offline, but **Add to Home screen** still gives you an icon.
+
 ## Use it
 
 1. Open the app in Chrome on your phone and tap **Start camera**.
