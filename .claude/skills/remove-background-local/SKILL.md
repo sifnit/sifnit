@@ -32,6 +32,8 @@ The first run in a fresh environment takes 1–2 minutes: it creates a Python en
 | `--alpha-matting` | Softer, cleaner edges on hair and fur. Slower. |
 | `--model NAME` | Choose the model (see below). |
 
+For fur, don't combine `--alpha-matting` with `--feather`: matting already softens the edge, and feathering would trim it back.
+
 Save as `.png` to keep transparency. Saving to `.jpg` flattens the image, so pair it with `--bg`.
 
 ## Choosing a model
@@ -42,6 +44,7 @@ Save as `.png` to keep transparency. Saving to `.jpg` flattens the image, so pai
 | `u2net_human_seg` | People only. Try this if a portrait cutout keeps bits of background |
 | `birefnet-portrait` | Highest-quality portraits and hair. ~900 MB download, slow on CPU |
 | `birefnet-general` | Highest-quality general cutouts. ~900 MB download, slow on CPU |
+| `bria-rmbg` | Bria's RMBG-2.0 run locally (~1 GB download). Similar to BiRefNet. Its license is non-commercial: personal use only |
 | `isnet-anime` | Anime and illustrated characters |
 | `u2net` | Older general model. Fallback if the default struggles |
 
@@ -64,7 +67,7 @@ $S photo.jpg --feather                         # smooth jagged edges (light)
 
 - Look at the result before reporting back (open the PNG with the Read tool). Check that the whole subject was kept and the background is gone.
 - If the edge looks jagged or stair-stepped, rerun with `--feather` (or `--feather 3`–`4` for softer). Keep it light on product shots, where crisp edges matter.
-- If parts of the subject went missing or background remains, try another model (`u2net_human_seg` for people, `u2net`, or a `birefnet-*` model) and compare. When the subject's color blends into a busy background (an animal against a fence or foliage, say), the default often clips pieces such as an ear; `birefnet-general` handles that best (about 1 minute per image on CPU).
+- If parts of the subject went missing or background remains, try another model (`u2net_human_seg` for people, `u2net`, or a `birefnet-*` model) and compare. When the subject's color blends into a busy background (an animal against a fence or foliage, say), the default often clips pieces such as an ear; `birefnet-general --alpha-matting` handles that best: the model finds the whole subject and matting recovers soft fur edges the model treats as background (about 30–60 s per image on CPU). Check thin parts such as ears, tails and fingers closely.
 - Hand the user the output path(s).
 
 ## Limits

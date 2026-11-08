@@ -33,6 +33,7 @@ if [ ! -s "$MODEL_DIR/$MODEL.onnx" ]; then
   case "$MODEL" in  # BiRefNet weights are published under longer filenames
     birefnet-general)  REMOTE="BiRefNet-general-epoch_244" ;;
     birefnet-portrait) REMOTE="BiRefNet-portrait-epoch_150" ;;
+    bria-rmbg)         REMOTE="bria-rmbg-2.0" ;;
     *)                 REMOTE="$MODEL" ;;
   esac
   curl -fsSL --retry 3 -o "$MODEL_DIR/$MODEL.onnx.part" \
