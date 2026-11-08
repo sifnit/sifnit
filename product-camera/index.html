@@ -26,7 +26,7 @@ button { background: none; border: 0; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [hidden] { display: none !important; }
 
-.app { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; }
+.app { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
 
 /* Top bar */
 .top {
@@ -34,12 +34,24 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   padding: calc(env(safe-area-inset-top, 0px) + 8px) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
   background: var(--bg); z-index: 3;
 }
-.setname { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.setname { flex: 1 1 140px; min-width: 120px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .setname label { color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
 .setname input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-weight: 600; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; white-space: nowrap; }
 .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-.chip svg { width: 16px; height: 16px; }
+.chip svg { width: 16px; height: 16px; flex: none; }
+.chip { flex: none; }
+@media (max-width: 440px) { .chip .wide { display: none; } .setname label { display: none; } }
+.pc { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; font-size: 13px; white-space: nowrap; border: 1px solid var(--line); }
+.pc::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pc[data-state="ok"]::before { background: var(--accent); }
+.pc[data-state="busy"]::before { background: var(--warn); animation: pulse 1s infinite alternate; }
+.pc[data-state="bad"] { color: var(--warn); }
+.pc[data-state="bad"]::before { background: var(--warn); }
+@keyframes pulse { to { opacity: .3; } }
+.shot .tag { position: absolute; left: 4px; top: 4px; padding: 1px 6px; border-radius: 6px; font-size: 10px; background: var(--panel); }
+.shot .tag.sent { color: var(--accent); }
+.shot .tag.unsent { color: var(--warn); }
 
 /* Viewfinder */
 .stage { position: relative; overflow: hidden; background: #000; }
@@ -127,9 +139,10 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
       <label for="setName">Set</label>
       <input id="setName" value="product" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Name used for saved files">
     </div>
+    <button class="pc" id="pcChip" role="status" hidden>PC</button>
     <button class="chip" id="gridBtn" aria-pressed="false" title="Show grid">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M6 1.5v13M10 1.5v13M1.5 6h13M1.5 10h13"/></svg>
-      Grid
+      <span class="wide">Grid</span>
     </button>
     <button class="chip" id="lockBtn" aria-pressed="false" title="Lock focus, exposure and white balance" hidden>
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="7" width="10" height="7.5" rx="1.5"/><path id="lockShackle" d="M5.5 7V5a2.5 2.5 0 0 1 5 0"/></svg>
@@ -208,6 +221,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
   <p id="shotsInfo"></p>
   <div class="actions">
     <button class="btn primary" id="saveAll"><span>Download all</span><small>Saves to your phone's Downloads folder</small></button>
+    <button class="btn primary" id="sendUnsent" hidden><span id="sendUnsentLabel">Send to PC</span><small>These photos didn't reach the PC yet</small></button>
     <button class="btn" id="shareAll" hidden><span>Share all</span><small>Send to Google Drive, Photos, email or another app</small></button>
   </div>
   <div class="shots" id="shotsGrid"></div>
@@ -568,8 +582,9 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
       const n = state.shots.length + 1;
       const base = ($("setName").value.trim() || "product").replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "") || "product";
       const ext = blob.type === "image/png" ? "png" : "jpg";
-      const shot = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), name: `${base}-${String(n).padStart(3, "0")}.${ext}`, blob, t: Date.now() };
-      addShot(shot); idb.putShot({ id: shot.id, name: shot.name, blob: shot.blob, t: shot.t });
+      const shot = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), name: `${base}-${String(n).padStart(3, "0")}.${ext}`, blob, t: Date.now(), object: base, sent: false };
+      addShot(shot); saveShot(shot);
+      if (pc.on) sendToPC(shot);
       if (state.autoRef || !state.ref) setReference(lastFrame);
     } catch { toast("Couldn't take the photo"); }
     finally { busy = false; $("shutter").disabled = false; }
@@ -585,11 +600,15 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
     if (n) $("lastImg").src = state.shots[n - 1].url;
     $("shotsInfo").textContent = n ? `${n} photo${n === 1 ? "" : "s"} in this set. Overlays are not included.` : "No photos yet.";
     $("saveAll").disabled = !n; $("shareAll").disabled = !n; $("clearAll").disabled = !n;
+    const unsent = state.shots.filter((s) => !s.sent).length;
+    $("sendUnsent").hidden = !pc.on || !unsent;
+    $("sendUnsentLabel").textContent = `Send ${unsent} photo${unsent === 1 ? "" : "s"} to PC`;
     const g = $("shotsGrid"); g.textContent = "";
     state.shots.slice().reverse().forEach((s) => {
       const fig = document.createElement("figure"); fig.className = "shot"; fig.style.margin = "0";
       const im = document.createElement("img"); im.src = s.url; im.alt = s.name; im.loading = "lazy";
       const cap = document.createElement("figcaption"); cap.textContent = s.name;
+      if (pc.on) { const tag = document.createElement("span"); tag.className = "tag " + (s.sent ? "sent" : "unsent"); tag.textContent = s.sent ? "On PC" : "Not sent"; fig.append(tag); }
       const del = document.createElement("button"); del.textContent = "×"; del.setAttribute("aria-label", "Delete " + s.name);
       del.addEventListener("click", () => { URL.revokeObjectURL(s.url); state.shots = state.shots.filter((x) => x !== s); idb.delShot(s.id); renderShots(); });
       fig.append(im, cap, del); g.append(fig);
@@ -615,6 +634,55 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
     $("clearConfirm").hidden = true; closeSheet("shots"); toast("Photos deleted");
   });
 
+  // ---------- PC: when the app is served by serve.py, every photo is sent there to be finished ----------
+  const pc = { on: false, timer: null };
+  function saveShot(s) { idb.putShot({ id: s.id, name: s.name, blob: s.blob, t: s.t, object: s.object, sent: s.sent }); }
+  async function sendToPC(s) {
+    try {
+      const r = await fetch("api/upload", {
+        method: "POST", body: s.blob,
+        headers: { "Content-Type": s.blob.type || "image/jpeg", "X-Object-Name": s.object || "product", "X-Taken": String(s.t) },
+      });
+      if (!r.ok) throw new Error(r.status);
+      s.sent = true; saveShot(s); renderShots(); showPC(await r.json()); pollPC();
+      return true;
+    } catch {
+      s.sent = false; saveShot(s); renderShots();
+      setPC("bad", "PC offline", "Can't reach the PC. Check it's on, serve.py is running, and both are on the same Wi-Fi.");
+      toast("Couldn't reach the PC. The photo is kept on the phone; send it later from Photos.");
+      return false;
+    }
+  }
+  // Short label on the chip; tapping it shows the full message.
+  function setPC(stateName, text, detail) { const c = $("pcChip"); c.dataset.state = stateName; c.textContent = text; pc.detail = detail || text; }
+  function showPC(st) {
+    if (st.error) return setPC("bad", "PC error", st.error);
+    if (!st.ready) return setPC("busy", "PC starting", "The PC is loading the cutout model. Photos you take now will wait in line.");
+    if (st.queued) return setPC("busy", `PC ${st.queued} left`, `The PC is finishing ${st.queued} photo${st.queued === 1 ? "" : "s"}.`);
+    setPC("ok", st.done ? `PC ${st.done} ✓` : "PC ready", st.done ? `The PC has finished ${st.done} photo${st.done === 1 ? "" : "s"}${st.last ? ". Latest: " + st.last : ""}.` : "Connected to the PC. Photos are sent there as you take them.");
+  }
+  $("pcChip").addEventListener("click", () => toast(pc.detail || ""));
+  async function checkPC() {
+    try {
+      const r = await fetch("api/status", { cache: "no-store" });
+      if (!r.ok) throw 0;
+      const st = await r.json(); if (!st.ok) throw 0;
+      if (!pc.on) { pc.on = true; $("pcChip").hidden = false; renderShots(); }
+      showPC(st);
+      return st;
+    } catch { if (pc.on) setPC("bad", "PC offline", "Can't reach the PC. Check it's on, serve.py is running, and both are on the same Wi-Fi."); return null; }
+  }
+  // Poll only while the PC has work, so the phone isn't chatting all the time.
+  function pollPC() {
+    clearTimeout(pc.timer);
+    pc.timer = setTimeout(async () => { const st = await checkPC(); if (st && (st.queued || !st.ready)) pollPC(); }, 2000);
+  }
+  $("sendUnsent").addEventListener("click", async () => {
+    const list = state.shots.filter((s) => !s.sent); let ok = 0;
+    for (const s of list) if (await sendToPC(s)) ok++;
+    toast(ok === list.length ? `Sent ${ok} to the PC` : `Sent ${ok} of ${list.length}. Check the PC is on and on the same Wi-Fi.`);
+  });
+
   // ---------- controls ----------
   function setMode(m) {
     state.mode = m; store.set("mode", m);
@@ -637,6 +705,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
     const ref = await idb.getKV("ref"); if (ref) { try { await setReference(await blobToImage(ref), { save: false }); } catch {} }
     const saved = (await idb.allShots()) || []; saved.sort((a, b) => a.t - b.t).forEach(addShot);
     renderShots();
+    checkPC().then((st) => { if (st && (st.queued || !st.ready)) pollPC(); });
     // Start straight away if permission was already given; otherwise wait for the button tap.
     try { const p = await navigator.permissions?.query({ name: "camera" }); if (p?.state === "granted") startCamera(); } catch {}
   })();

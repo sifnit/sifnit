@@ -2,18 +2,43 @@
 
 A phone camera web app for consistent product photos. It overlays your last shot, or any reference image, on the live view so you can line up the next product the same way. The overlay is only on screen; saved photos come straight from the camera.
 
-## Run it from your computer
+## Run it from your PC
 
-The camera only works over HTTPS, so `serve.py` runs a small HTTPS server with a self-signed certificate. It needs Python 3, plus either `pip install cryptography` or the `openssl` command.
+The PC serves the app to your phone, and finishes every photo you take:
 
-```bash
+- cuts the item out, with a light feather on the edge
+- centres it on a white 1000 × 1000 square with a small white border
+- names it after the object and the date: `blue-mug_2026-11-09.jpg`, then `_2`, `_3` for more that day
+
+The object name is the **Set** name at the top of the camera app. The date comes from the photo.
+
+**One-time setup** (Python 3.10 to 3.13):
+
+```
 cd product-camera
-python3 serve.py
+pip install -r requirements.txt
 ```
 
-It prints an address like `https://192.168.1.20:8443`. Open that in Chrome on your phone, on the same Wi-Fi. Chrome warns that the connection isn't private because the certificate is self-signed: tap **Advanced**, then **Proceed**. Chrome remembers that choice for the address.
+**Each time:**
 
-If your computer gets a new network address, the script makes a new certificate and you tap through the warning once more. On a self-signed certificate, Chrome won't install the app or cache it offline, but **Add to Home screen** still gives you an icon.
+```
+python serve.py
+```
+
+The first start downloads the cutout model (about 900 MB). It prints an address like `https://192.168.1.20:8443`. Open that in Chrome on your phone, on the same Wi-Fi. Chrome warns that the connection isn't private because the certificate is self-signed: tap **Advanced**, then **Proceed**. On Windows, allow Python through the firewall for **Private networks** when asked.
+
+Photos land in `product-camera/photos/`:
+
+- `finished/`: the 1000 × 1000 white-background images
+- `originals/`: the untouched photos from the phone
+
+To save somewhere else: `python serve.py --out D:\Listings`
+
+The chip at the top of the app shows the PC's progress; tap it for details. If the phone can't reach the PC, photos stay on the phone, and **Photos → Send to PC** sends them later.
+
+Each photo takes 20 to 30 seconds on the PC and uses about 8 GB of memory while it works. PCs with less than 12 GB of RAM automatically use a lighter cutout model, which is fast but slightly less precise on edges.
+
+**Photos already on the PC:** `python process.py some-folder --name blue-mug` finishes every photo in a folder the same way.
 
 ## Use it
 
