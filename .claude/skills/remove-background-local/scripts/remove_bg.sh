@@ -9,10 +9,11 @@ VENV="$CACHE/venv"
 MODEL_DIR="${U2NET_HOME:-$HOME/.u2net}"
 export U2NET_HOME="$MODEL_DIR"
 
-# Pick the model from the args (default isnet-general-use) so it can be fetched up front.
-MODEL="isnet-general-use"
+# Work out which model the args need so it can be fetched up front.
+MODEL="birefnet-general"
 prev=""
 for a in "$@"; do
+  [ "$a" = "--fast" ] && MODEL="isnet-general-use"
   [ "$prev" = "--model" ] && MODEL="$a"
   case "$a" in --model=*) MODEL="${a#--model=}" ;; esac
   prev="$a"
@@ -33,7 +34,6 @@ if [ ! -s "$MODEL_DIR/$MODEL.onnx" ]; then
   case "$MODEL" in  # BiRefNet weights are published under longer filenames
     birefnet-general)  REMOTE="BiRefNet-general-epoch_244" ;;
     birefnet-portrait) REMOTE="BiRefNet-portrait-epoch_150" ;;
-    bria-rmbg)         REMOTE="bria-rmbg-2.0" ;;
     *)                 REMOTE="$MODEL" ;;
   esac
   curl -fsSL --retry 3 -o "$MODEL_DIR/$MODEL.onnx.part" \

@@ -63,10 +63,11 @@ def main():
     p = argparse.ArgumentParser(description="Remove image backgrounds locally.")
     p.add_argument("input", help="image file or folder of images")
     p.add_argument("output", nargs="?", help="output file or folder (default: <name>_cutout.png next to input)")
-    p.add_argument("--model", default="isnet-general-use",
-                   help="isnet-general-use (default), u2net, u2net_human_seg, isnet-anime, birefnet-general, birefnet-portrait")
+    p.add_argument("--fast", action="store_true", help="quicker, lighter model for big batches (less accurate)")
+    p.add_argument("--model", help=argparse.SUPPRESS)  # advanced override
     p.add_argument("--mask", action="store_true", help="output the black/white mask instead of the cutout")
-    p.add_argument("--alpha-matting", action="store_true", help="softer edges for hair/fur (slower)")
+    p.add_argument("--touch-up", "--alpha-matting", dest="alpha_matting", action="store_true",
+                   help="refine the edge to recover fur, hair and thin parts the first pass clipped")
     p.add_argument("--feather", type=float, nargs="?", const=2.0, default=0.0, metavar="PX",
                    help="soften jagged edges; optional strength in pixels (default 2 if given without a number)")
     p.add_argument("--crop", action="store_true", help="crop to the subject")
@@ -75,7 +76,8 @@ def main():
     args = p.parse_args()
 
     src = Path(args.input).expanduser()
-    session = new_session(args.model)
+    model = args.model or ("isnet-general-use" if args.fast else "birefnet-general")
+    session = new_session(model)
 
     if src.is_dir():
         out_dir = Path(args.output).expanduser() if args.output else src / "cutouts"
