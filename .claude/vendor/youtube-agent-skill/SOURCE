@@ -1,0 +1,5 @@
+Source: https://github.com/Jakeschincariol/youtube-agent-skill
+Commit: a2feb21 (2026-09-16)
+License: MIT (see LICENSE)
+Installed: .claude/skills/yt-*
+Voice template: voice.md -> copy to ~/.claude/youtube/voice.md
