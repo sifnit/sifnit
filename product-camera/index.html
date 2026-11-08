@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101214">
+<title>Product Camera</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* Layout: full-bleed viewfinder, controls docked to the bottom like a native camera app. Single dark look on purpose. */
+:root {
+  --bg: #101214;
+  --panel: rgba(16, 18, 20, 0.82);
+  --fg: #eef1f3;
+  --muted: #9aa3ab;
+  --line: rgba(238, 241, 243, 0.16);
+  --accent: #39e5c4;       /* outline + active state: reads on any product backdrop */
+  --warn: #ffb547;
+  --font: "Roboto Flex", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 var(--font); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.app { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; }
+
+/* Top bar */
+.top {
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+  background: var(--bg); z-index: 3;
+}
+.setname { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.setname label { color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.setname input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-weight: 600; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; white-space: nowrap; }
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.chip svg { width: 16px; height: 16px; }
+
+/* Viewfinder */
+.stage { position: relative; overflow: hidden; background: #000; }
+.stage video, .stage canvas { position: absolute; }
+#overlay, #grid { pointer-events: none; }
+.notice {
+  position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 24px; text-align: center; color: var(--muted);
+}
+.notice strong { color: var(--fg); font-size: 16px; }
+.notice button { justify-self: center; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #062019; font-weight: 600; }
+.badge {
+  position: absolute; left: 12px; top: 12px; padding: 4px 8px; border-radius: 6px; background: var(--panel);
+  font-size: 12px; color: var(--muted); pointer-events: none;
+}
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .25s ease-out; }
+.flash.on { opacity: .55; transition: none; }
+.toast {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); max-width: calc(100% - 24px);
+  padding: 8px 12px; border-radius: 8px; background: var(--panel); font-size: 13px; text-align: center; pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+}
+.toast.on { opacity: 1; }
+
+/* Bottom controls */
+.controls {
+  display: grid; gap: 12px; background: var(--bg); z-index: 3;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px));
+}
+.row { display: flex; align-items: center; gap: 12px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex: 1; }
+.seg button { padding: 8px 0; font-size: 13px; color: var(--muted); }
+.seg button[aria-checked="true"] { background: var(--fg); color: var(--bg); font-weight: 600; }
+.slider { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.slider label { font-size: 12px; color: var(--muted); width: 56px; }
+.slider output { font-size: 12px; color: var(--muted); width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+
+.shutter-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.thumb {
+  width: 56px; height: 56px; border-radius: 10px; border: 1px solid var(--line); overflow: hidden; position: relative;
+  display: grid; place-items: center; color: var(--muted); font-size: 11px; text-align: center; line-height: 1.2;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb .count { position: absolute; right: 3px; bottom: 3px; background: var(--accent); color: #062019; font-weight: 700; font-size: 11px; padding: 0 5px; border-radius: 6px; }
+.thumb-wrap { display: grid; justify-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.thumb-wrap.left { justify-self: start; }
+.thumb-wrap.right { justify-self: end; }
+.shutter { width: 76px; height: 76px; border-radius: 50%; border: 4px solid var(--fg); display: grid; place-items: center; }
+.shutter span { width: 60px; height: 60px; border-radius: 50%; background: var(--fg); transition: transform .1s; }
+.shutter:active span { transform: scale(.9); }
+.shutter:disabled { opacity: .4; }
+
+/* Sheets */
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; max-height: 80%; overflow: auto; z-index: 11;
+  background: #181b1e; border-radius: 14px 14px 0 0;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(16px, env(safe-area-inset-left, 0px));
+  display: grid; gap: 12px;
+}
+.sheet h2 { margin: 0; font-size: 16px; }
+.sheet p { margin: 0; color: var(--muted); }
+.actions { display: grid; gap: 8px; }
+.btn { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); text-align: left; display: grid; gap: 2px; }
+.btn small { color: var(--muted); }
+.btn.primary { background: var(--accent); color: #062019; border-color: transparent; font-weight: 600; }
+.btn.primary small { color: #0b3a30; }
+.btn.danger { color: var(--warn); }
+.btn:disabled { opacity: .4; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.shot { position: relative; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.shot img { width: 100%; height: 100%; object-fit: cover; }
+.shot figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px; background: var(--panel); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shot button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; background: var(--panel); font-size: 15px; line-height: 1; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.confirm .btn { flex: 1; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="setname">
+      <label for="setName">Set</label>
+      <input id="setName" value="product" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Name used for saved files">
+    </div>
+    <button class="chip" id="gridBtn" aria-pressed="false" title="Show grid">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M6 1.5v13M10 1.5v13M1.5 6h13M1.5 10h13"/></svg>
+      Grid
+    </button>
+    <button class="chip" id="lockBtn" aria-pressed="false" title="Lock focus, exposure and white balance" hidden>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="7" width="10" height="7.5" rx="1.5"/><path id="lockShackle" d="M5.5 7V5a2.5 2.5 0 0 1 5 0"/></svg>
+      <span id="lockLabel">Auto</span>
+    </button>
+  </header>
+
+  <main class="stage" id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+    <canvas id="grid"></canvas>
+    <div class="badge" id="badge" hidden></div>
+    <div class="flash" id="flash"></div>
+    <div class="notice" id="notice">
+      <strong>Camera is off</strong>
+      <span id="noticeText">Tap below to allow camera access.</span>
+      <button id="startBtn">Start camera</button>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <section class="controls">
+    <div class="row">
+      <div class="seg" role="radiogroup" aria-label="Overlay">
+        <button role="radio" data-mode="off" aria-checked="false">Off</button>
+        <button role="radio" data-mode="ghost" aria-checked="true">Ghost</button>
+        <button role="radio" data-mode="outline" aria-checked="false">Outline</button>
+      </div>
+    </div>
+    <div class="row" id="opacityRow">
+      <div class="slider">
+        <label for="opacity">Overlay</label>
+        <input type="range" id="opacity" min="10" max="90" value="35">
+        <output id="opacityOut" for="opacity">35%</output>
+      </div>
+    </div>
+    <div class="row" id="zoomRow" hidden>
+      <div class="slider">
+        <label for="zoom">Zoom</label>
+        <input type="range" id="zoom" step="0.1">
+        <output id="zoomOut" for="zoom">1.0×</output>
+      </div>
+    </div>
+    <div class="shutter-row">
+      <div class="thumb-wrap left">
+        <button class="thumb" id="refBtn" aria-label="Reference image options"><span id="refEmpty">No<br>reference</span><img id="refImg" alt="" hidden></button>
+        Reference
+      </div>
+      <button class="shutter" id="shutter" aria-label="Take photo" disabled><span></span></button>
+      <div class="thumb-wrap right">
+        <button class="thumb" id="shotsBtn" aria-label="View photos"><span id="shotsEmpty">No<br>photos</span><img id="lastImg" alt="" hidden><span class="count" id="shotCount" hidden>0</span></button>
+        Photos
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Reference sheet -->
+<div class="sheet-bg" id="refSheetBg" hidden></div>
+<div class="sheet" id="refSheet" role="dialog" aria-labelledby="refTitle" hidden>
+  <h2 id="refTitle">Reference image</h2>
+  <p>The reference shows on screen only. It is never part of your photos.</p>
+  <div class="actions">
+    <button class="btn primary" id="refUseLast"><span>Use last photo</span><small>Match every next shot to the one you just took</small></button>
+    <button class="btn" id="refLoad"><span>Load from phone</span><small>Any photo, or a transparent PNG cutout for a clean outline</small></button>
+    <label class="btn" style="cursor:pointer"><span><input type="checkbox" id="autoRef"> Follow last photo automatically</span><small>Each new photo becomes the reference for the next</small></label>
+    <button class="btn danger" id="refClear"><span>Remove reference</span></button>
+  </div>
+  <input type="file" id="refFile" accept="image/*" hidden>
+</div>
+
+<!-- Photos sheet -->
+<div class="sheet-bg" id="shotsSheetBg" hidden></div>
+<div class="sheet" id="shotsSheet" role="dialog" aria-labelledby="shotsTitle" hidden>
+  <h2 id="shotsTitle">Photos</h2>
+  <p id="shotsInfo"></p>
+  <div class="actions">
+    <button class="btn primary" id="saveAll"><span>Download all</span><small>Saves to your phone's Downloads folder</small></button>
+    <button class="btn" id="shareAll" hidden><span>Share all</span><small>Send to Google Drive, Photos, email or another app</small></button>
+  </div>
+  <div class="shots" id="shotsGrid"></div>
+  <div class="confirm">
+    <button class="btn danger" id="clearAll"><span>Delete all photos</span></button>
+  </div>
+  <div class="confirm" id="clearConfirm" hidden>
+    <span>Delete every photo in this set?</span>
+    <button class="btn danger" id="clearYes">Delete</button>
+    <button class="btn" id="clearNo">Keep</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const video = $("video"), overlay = $("overlay"), gridC = $("grid"), stage = $("stage");
+  const octx = overlay.getContext("2d"), gctx = gridC.getContext("2d");
+
+  // ---------- settings (per device, best effort) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("pc." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem("pc." + k, JSON.stringify(v)); } catch {} },
+  };
+  const state = {
+    mode: store.get("mode", "ghost"),
+    opacity: store.get("opacity", 35),
+    grid: store.get("grid", false),
+    autoRef: store.get("autoRef", true),
+    zoom: store.get("zoom", null),
+    ref: null,          // { img: HTMLCanvasElement, outline: HTMLCanvasElement|null, kind }
+    shots: [],          // { id, name, blob, url }
+    track: null, imageCapture: null, locked: false,
+  };
+
+  // ---------- tiny IndexedDB for photos + reference (survive reloads) ----------
+  const idb = (() => {
+    let dbp;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open("product-camera", 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore("shots", { keyPath: "id" }); r.result.createObjectStore("kv"); };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const tx = async (name, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(name, mode); const out = fn(t.objectStore(name)); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); };
+    return {
+      putShot: (s) => tx("shots", "readwrite", (o) => o.put(s)).catch(() => {}),
+      delShot: (id) => tx("shots", "readwrite", (o) => o.delete(id)).catch(() => {}),
+      clearShots: () => tx("shots", "readwrite", (o) => o.clear()).catch(() => {}),
+      allShots: () => tx("shots", "readonly", (o) => o.getAll()).catch(() => []),
+      setKV: (k, v) => tx("kv", "readwrite", (o) => o.put(v, k)).catch(() => {}),
+      getKV: (k) => tx("kv", "readonly", (o) => o.get(k)).catch(() => undefined),
+    };
+  })();
+
+  // ---------- UI helpers ----------
+  let toastTimer;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2200); }
+  function openSheet(name) { $(name + "Sheet").hidden = false; $(name + "SheetBg").hidden = false; }
+  function closeSheet(name) { $(name + "Sheet").hidden = true; $(name + "SheetBg").hidden = true; }
+  ["ref", "shots"].forEach((n) => $(n + "SheetBg").addEventListener("click", () => closeSheet(n)));
+
+  // ---------- camera ----------
+  async function startCamera() {
+    $("noticeText").textContent = "Starting camera…";
+    $("startBtn").hidden = true;
+    if (!navigator.mediaDevices?.getUserMedia) return cameraError("This browser can't use the camera here. Open the page over https in Chrome.");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 4096 }, height: { ideal: 3072 }, aspectRatio: { ideal: 4 / 3 } },
+      });
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+      state.track = stream.getVideoTracks()[0];
+      state.imageCapture = ("ImageCapture" in window) ? new ImageCapture(state.track) : null;
+      $("notice").hidden = true;
+      $("shutter").disabled = false;
+      setupTrackControls();
+      requestWakeLock();
+    } catch (e) {
+      cameraError(e && e.name === "NotAllowedError"
+        ? "Camera permission was blocked. Allow it from the lock icon next to the address bar, then try again."
+        : "Couldn't start the camera (" + (e && e.name || "error") + ").");
+    }
+  }
+  function cameraError(msg) { $("notice").hidden = false; $("noticeText").textContent = msg; $("startBtn").hidden = false; $("startBtn").textContent = "Try again"; }
+  $("startBtn").addEventListener("click", startCamera);
+
+  function setupTrackControls() {
+    const t = state.track;
+    const caps = t.getCapabilities ? t.getCapabilities() : {};
+    // Zoom
+    if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+      const z = $("zoom");
+      z.min = caps.zoom.min; z.max = Math.min(caps.zoom.max, 10); z.step = caps.zoom.step || 0.1;
+      const want = state.zoom != null ? Math.min(Math.max(state.zoom, caps.zoom.min), z.max) : (t.getSettings().zoom || caps.zoom.min);
+      z.value = want; applyZoom(want);
+      $("zoomRow").hidden = false;
+    }
+    // Lock: only if at least one of focus / exposure / white balance can be held
+    const canLock = ["focusMode", "exposureMode", "whiteBalanceMode"].some((k) => Array.isArray(caps[k]) && caps[k].includes("manual"));
+    $("lockBtn").hidden = !canLock;
+  }
+  async function applyZoom(v) {
+    $("zoomOut").textContent = Number(v).toFixed(1) + "×";
+    try { await state.track.applyConstraints({ advanced: [{ zoom: Number(v) }] }); } catch {}
+    store.set("zoom", Number(v));
+  }
+  $("zoom").addEventListener("input", (e) => applyZoom(e.target.value));
+
+  // Lock holds the current focus distance, exposure time and colour temperature so every shot in a set matches.
+  async function setLock(on) {
+    const t = state.track; if (!t) return;
+    const caps = t.getCapabilities(), s = t.getSettings();
+    const held = [];
+    const tryApply = async (c, label) => { try { await t.applyConstraints({ advanced: [c] }); held.push(label); } catch {} };
+    if (on) {
+      if (caps.focusMode?.includes("manual") && s.focusDistance != null) await tryApply({ focusMode: "manual", focusDistance: s.focusDistance }, "focus");
+      if (caps.exposureMode?.includes("manual") && s.exposureTime != null) await tryApply({ exposureMode: "manual", exposureTime: s.exposureTime }, "exposure");
+      if (caps.whiteBalanceMode?.includes("manual") && s.colorTemperature) await tryApply({ whiteBalanceMode: "manual", colorTemperature: s.colorTemperature }, "white balance");
+      state.locked = held.length > 0;
+      toast(held.length ? "Locked " + held.join(", ") : "This camera won't hold its settings");
+    } else {
+      for (const [k, v] of [["focusMode", "continuous"], ["exposureMode", "continuous"], ["whiteBalanceMode", "continuous"]]) {
+        if (caps[k]?.includes(v)) await tryApply({ [k]: v }, k);
+      }
+      state.locked = false;
+      toast("Back to auto");
+    }
+    $("lockBtn").setAttribute("aria-pressed", String(state.locked));
+    $("lockLabel").textContent = state.locked ? "Locked" : "Auto";
+    $("lockShackle").setAttribute("d", state.locked ? "M5.5 7V5a2.5 2.5 0 0 1 5 0V7" : "M5.5 7V5a2.5 2.5 0 0 1 5 0");
+  }
+  $("lockBtn").addEventListener("click", () => setLock(!state.locked));
+
+  let wakeLock = null;
+  async function requestWakeLock() { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {} }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && state.track) requestWakeLock(); });
+
+  // ---------- layout: video shown whole (contain) so the frame you see is the frame you get ----------
+  let rect = { x: 0, y: 0, w: 0, h: 0 };
+  function layout() {
+    const W = stage.clientWidth, H = stage.clientHeight;
+    const vw = video.videoWidth || 3, vh = video.videoHeight || 4;
+    const s = Math.min(W / vw, H / vh);
+    rect = { w: Math.round(vw * s), h: Math.round(vh * s) };
+    rect.x = Math.round((W - rect.w) / 2); rect.y = Math.round((H - rect.h) / 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    for (const el of [video, overlay, gridC]) { Object.assign(el.style, { left: rect.x + "px", top: rect.y + "px", width: rect.w + "px", height: rect.h + "px" }); }
+    for (const c of [overlay, gridC]) { c.width = Math.round(rect.w * dpr); c.height = Math.round(rect.h * dpr); }
+    drawOverlay(); drawGrid();
+  }
+  new ResizeObserver(layout).observe(stage);
+  video.addEventListener("loadedmetadata", layout);
+  video.addEventListener("resize", layout);
+
+  function drawGrid() {
+    gctx.clearRect(0, 0, gridC.width, gridC.height);
+    if (!state.grid) return;
+    const w = gridC.width, h = gridC.height;
+    const lw = Math.max(1, w / 500), c = Math.min(w, h) * 0.03;
+    const path = () => {
+      gctx.beginPath();
+      for (const f of [1 / 3, 2 / 3]) { gctx.moveTo(w * f, 0); gctx.lineTo(w * f, h); gctx.moveTo(0, h * f); gctx.lineTo(w, h * f); }
+      // centre cross: line up the product's middle
+      gctx.moveTo(w / 2 - c, h / 2); gctx.lineTo(w / 2 + c, h / 2); gctx.moveTo(w / 2, h / 2 - c); gctx.lineTo(w / 2, h / 2 + c);
+    };
+    // Dark under-stroke + light stroke so the grid shows on white and black backdrops alike.
+    path(); gctx.strokeStyle = "rgba(0,0,0,.35)"; gctx.lineWidth = lw * 3; gctx.stroke();
+    path(); gctx.strokeStyle = "rgba(255,255,255,.75)"; gctx.lineWidth = lw; gctx.stroke();
+  }
+
+  function drawOverlay() {
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    const badge = $("badge");
+    if (!state.ref || state.mode === "off") { badge.hidden = true; return; }
+    const src = state.mode === "outline" ? state.ref.outline : state.ref.img;
+    if (!src) return;
+    // Fit the reference inside the frame the same way the video is fitted.
+    const s = Math.min(overlay.width / src.width, overlay.height / src.height);
+    const w = src.width * s, h = src.height * s;
+    octx.globalAlpha = state.opacity / 100;
+    if (state.mode === "outline") octx.globalAlpha = Math.min(1, state.opacity / 100 + 0.35);
+    octx.imageSmoothingEnabled = true;
+    octx.drawImage(src, (overlay.width - w) / 2, (overlay.height - h) / 2, w, h);
+    octx.globalAlpha = 1;
+    badge.hidden = state.mode !== "outline";
+    badge.textContent = state.ref.kind === "silhouette" ? "Outline: product silhouette" : "Outline: edges";
+  }
+
+  // ---------- reference + outline ----------
+  // Outline strategy: a transparent PNG gives its exact silhouette; a photo on a plain backdrop gives the
+  // silhouette of whatever differs from the border colour; anything busier falls back to edge lines.
+  function toCanvas(source, maxSide) {
+    const sw = source.videoWidth || source.naturalWidth || source.width, sh = source.videoHeight || source.naturalHeight || source.height;
+    const s = Math.min(1, maxSide / Math.max(sw, sh));
+    const c = document.createElement("canvas"); c.width = Math.round(sw * s); c.height = Math.round(sh * s);
+    c.getContext("2d").drawImage(source, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  function makeOutline(img) {
+    const small = toCanvas(img, 480), w = small.width, h = small.height, n = w * h;
+    const px = small.getContext("2d").getImageData(0, 0, w, h).data;
+    let mask = new Uint8Array(n), kind = "silhouette";
+
+    let transparent = 0;
+    for (let i = 0; i < n; i++) if (px[i * 4 + 3] < 128) transparent++;
+    if (transparent > n * 0.01) {
+      for (let i = 0; i < n; i++) mask[i] = px[i * 4 + 3] >= 128 ? 1 : 0;
+    } else {
+      // Backdrop colour = median of the border pixels.
+      const rs = [], gs = [], bs = [];
+      const push = (x, y) => { const k = (y * w + x) * 4; rs.push(px[k]); gs.push(px[k + 1]); bs.push(px[k + 2]); };
+      for (let x = 0; x < w; x += 2) { push(x, 0); push(x, h - 1); }
+      for (let y = 0; y < h; y += 2) { push(0, y); push(w - 1, y); }
+      const med = (a) => a.sort((p, q) => p - q)[a.length >> 1];
+      const br = med(rs), bg = med(gs), bb = med(bs);
+      const dist = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const k = i * 4; dist[i] = Math.hypot(px[k] - br, px[k + 1] - bg, px[k + 2] - bb); }
+      const thr = Math.max(28, otsu(dist));
+      for (let i = 0; i < n; i++) mask[i] = dist[i] > thr ? 1 : 0;
+      mask = cleanMask(mask, w, h);
+      const fill = mask.reduce((a, v) => a + v, 0) / n;
+      if (fill < 0.01 || fill > 0.85) { mask = edgeMap(px, w, h); kind = "edges"; }
+    }
+
+    // Boundary pixels (silhouette) or edges as-is, drawn at the reference's size.
+    const line = new Uint8Array(n);
+    if (kind === "silhouette") {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x; if (!mask[i]) continue;
+        if (x === 0 || y === 0 || x === w - 1 || y === h - 1 || !mask[i - 1] || !mask[i + 1] || !mask[i - w] || !mask[i + w]) line[i] = 1;
+      }
+    } else line.set(mask);
+    // Thicken by one pixel so the line stays visible at phone size.
+    const thick = new Uint8Array(line);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x; if (line[i]) { thick[i - 1] = thick[i + 1] = thick[i - w] = thick[i + w] = 1; }
+    }
+    line.set(thick);
+
+    const lc = document.createElement("canvas"); lc.width = w; lc.height = h;
+    const lctx = lc.getContext("2d"), out = lctx.createImageData(w, h);
+    for (let i = 0; i < n; i++) if (line[i]) { const k = i * 4; out.data[k] = 57; out.data[k + 1] = 229; out.data[k + 2] = 196; out.data[k + 3] = 255; }
+    lctx.putImageData(out, 0, 0);
+    // Upscale with a soft dark halo so the line reads on light and dark backdrops.
+    const big = document.createElement("canvas"); const S = 1280 / Math.max(w, h);
+    big.width = Math.round(w * S); big.height = Math.round(h * S);
+    const b = big.getContext("2d"); b.imageSmoothingEnabled = true;
+    b.shadowColor = "rgba(0,0,0,.9)"; b.shadowBlur = 4;
+    b.drawImage(lc, 0, 0, big.width, big.height);
+    b.drawImage(lc, 0, 0, big.width, big.height);
+    return { canvas: big, kind };
+  }
+
+  function otsu(vals) {
+    const bins = new Float64Array(256); let max = 0;
+    for (const v of vals) if (v > max) max = v;
+    if (max === 0) return 0;
+    for (const v of vals) bins[Math.min(255, Math.floor(v / max * 255))]++;
+    let sum = 0; for (let i = 0; i < 256; i++) sum += i * bins[i];
+    let sumB = 0, wB = 0, best = 0, bestT = 0; const total = vals.length;
+    for (let t = 0; t < 256; t++) {
+      wB += bins[t]; if (!wB) continue; const wF = total - wB; if (!wF) break;
+      sumB += t * bins[t]; const mB = sumB / wB, mF = (sum - sumB) / wF, between = wB * wF * (mB - mF) ** 2;
+      if (between > best) { best = between; bestT = t; }
+    }
+    return bestT / 255 * max;
+  }
+
+  // Keep the largest blob and fill its holes.
+  function cleanMask(m, w, h) {
+    const n = w * h, label = new Int32Array(n), stack = [];
+    let best = 0, bestSize = 0, cur = 0;
+    for (let i = 0; i < n; i++) {
+      if (!m[i] || label[i]) continue;
+      cur++; let size = 0; stack.push(i); label[i] = cur;
+      while (stack.length) {
+        const j = stack.pop(); size++; const x = j % w, y = (j / w) | 0;
+        for (const k of [x > 0 ? j - 1 : -1, x < w - 1 ? j + 1 : -1, y > 0 ? j - w : -1, y < h - 1 ? j + w : -1]) {
+          if (k >= 0 && m[k] && !label[k]) { label[k] = cur; stack.push(k); }
+        }
+      }
+      if (size > bestSize) { bestSize = size; best = cur; }
+    }
+    const keep = new Uint8Array(n); for (let i = 0; i < n; i++) keep[i] = label[i] === best ? 1 : 0;
+    const outside = new Uint8Array(n);
+    for (let x = 0; x < w; x++) { stack.push(x, (h - 1) * w + x); }
+    for (let y = 0; y < h; y++) { stack.push(y * w, y * w + w - 1); }
+    while (stack.length) {
+      const j = stack.pop(); if (outside[j] || keep[j]) continue; outside[j] = 1; const x = j % w, y = (j / w) | 0;
+      if (x > 0) stack.push(j - 1); if (x < w - 1) stack.push(j + 1); if (y > 0) stack.push(j - w); if (y < h - 1) stack.push(j + w);
+    }
+    for (let i = 0; i < n; i++) keep[i] = outside[i] ? 0 : 1;
+    return keep;
+  }
+
+  function edgeMap(px, w, h) {
+    const g = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) g[i] = px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114;
+    const mag = new Float32Array(w * h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const gx = -g[i - w - 1] - 2 * g[i - 1] - g[i + w - 1] + g[i - w + 1] + 2 * g[i + 1] + g[i + w + 1];
+      const gy = -g[i - w - 1] - 2 * g[i - w] - g[i - w + 1] + g[i + w - 1] + 2 * g[i + w] + g[i + w + 1];
+      mag[i] = Math.hypot(gx, gy);
+    }
+    const sorted = Array.from(mag).sort((a, b) => a - b), thr = sorted[Math.floor(sorted.length * 0.9)];
+    const m = new Uint8Array(w * h); for (let i = 0; i < w * h; i++) m[i] = mag[i] > thr && mag[i] > 40 ? 1 : 0;
+    return m;
+  }
+
+  async function setReference(source, { save = true } = {}) {
+    const img = toCanvas(source, 1280);
+    const { canvas, kind } = makeOutline(img);
+    state.ref = { img, outline: canvas, kind };
+    $("refImg").src = img.toDataURL("image/jpeg", 0.7); $("refImg").hidden = false; $("refEmpty").hidden = true;
+    drawOverlay();
+    if (save) img.toBlob((b) => b && idb.setKV("ref", b), "image/png");
+  }
+  function clearReference() {
+    state.ref = null; $("refImg").hidden = true; $("refEmpty").hidden = false; drawOverlay(); idb.setKV("ref", null);
+  }
+  async function blobToImage(blob) {
+    const url = URL.createObjectURL(blob);
+    try { const im = new Image(); im.src = url; await im.decode(); return im; } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  }
+
+  $("refBtn").addEventListener("click", () => { $("refUseLast").disabled = !lastFrame; openSheet("ref"); });
+  $("refUseLast").addEventListener("click", () => { if (lastFrame) { setReference(lastFrame); toast("Reference set"); } closeSheet("ref"); });
+  $("refLoad").addEventListener("click", () => $("refFile").click());
+  $("refFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try { await setReference(await blobToImage(f)); toast("Reference loaded"); } catch { toast("Couldn't read that image"); }
+    closeSheet("ref");
+  });
+  $("refClear").addEventListener("click", () => { clearReference(); closeSheet("ref"); });
+  $("autoRef").addEventListener("change", (e) => { state.autoRef = e.target.checked; store.set("autoRef", state.autoRef); });
+
+  // ---------- capture ----------
+  // The saved file comes straight from the camera; the overlay canvas is never drawn into it.
+  // lastFrame is what the viewfinder showed at that moment, so a reference made from it lines up exactly.
+  let lastFrame = null, busy = false;
+  async function capture() {
+    if (busy || !state.track) return; busy = true; $("shutter").disabled = true;
+    const fl = $("flash"); fl.classList.add("on"); requestAnimationFrame(() => requestAnimationFrame(() => fl.classList.remove("on")));
+    try {
+      lastFrame = toCanvas(video, 1280);
+      let blob = null;
+      if (state.imageCapture) { try { blob = await state.imageCapture.takePhoto(); } catch {} }
+      if (!blob) {
+        const c = document.createElement("canvas"); c.width = video.videoWidth; c.height = video.videoHeight;
+        c.getContext("2d").drawImage(video, 0, 0);
+        blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.95));
+      }
+      const n = state.shots.length + 1;
+      const base = ($("setName").value.trim() || "product").replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "") || "product";
+      const ext = blob.type === "image/png" ? "png" : "jpg";
+      const shot = { id: Date.now() + "-" + Math.random().toString(36).slice(2, 7), name: `${base}-${String(n).padStart(3, "0")}.${ext}`, blob, t: Date.now() };
+      addShot(shot); idb.putShot({ id: shot.id, name: shot.name, blob: shot.blob, t: shot.t });
+      if (state.autoRef || !state.ref) setReference(lastFrame);
+    } catch { toast("Couldn't take the photo"); }
+    finally { busy = false; $("shutter").disabled = false; }
+  }
+  $("shutter").addEventListener("click", capture);
+  document.addEventListener("keydown", (e) => { if ((e.key === "AudioVolumeDown" || e.key === "AudioVolumeUp" || e.key === " ") && document.activeElement?.tagName !== "INPUT") { e.preventDefault(); capture(); } });
+
+  function addShot(s) { s.url = URL.createObjectURL(s.blob); state.shots.push(s); renderShots(); }
+  function renderShots() {
+    const n = state.shots.length;
+    $("shotCount").hidden = !n; $("shotCount").textContent = n;
+    $("shotsEmpty").hidden = !!n; $("lastImg").hidden = !n;
+    if (n) $("lastImg").src = state.shots[n - 1].url;
+    $("shotsInfo").textContent = n ? `${n} photo${n === 1 ? "" : "s"} in this set. Overlays are not included.` : "No photos yet.";
+    $("saveAll").disabled = !n; $("shareAll").disabled = !n; $("clearAll").disabled = !n;
+    const g = $("shotsGrid"); g.textContent = "";
+    state.shots.slice().reverse().forEach((s) => {
+      const fig = document.createElement("figure"); fig.className = "shot"; fig.style.margin = "0";
+      const im = document.createElement("img"); im.src = s.url; im.alt = s.name; im.loading = "lazy";
+      const cap = document.createElement("figcaption"); cap.textContent = s.name;
+      const del = document.createElement("button"); del.textContent = "×"; del.setAttribute("aria-label", "Delete " + s.name);
+      del.addEventListener("click", () => { URL.revokeObjectURL(s.url); state.shots = state.shots.filter((x) => x !== s); idb.delShot(s.id); renderShots(); });
+      fig.append(im, cap, del); g.append(fig);
+    });
+  }
+  $("shotsBtn").addEventListener("click", () => { $("clearConfirm").hidden = true; openSheet("shots"); });
+
+  function download(s) { const a = document.createElement("a"); a.href = s.url; a.download = s.name; document.body.append(a); a.click(); a.remove(); }
+  $("saveAll").addEventListener("click", async () => {
+    for (const s of state.shots) { download(s); await new Promise((r) => setTimeout(r, 350)); }
+    toast(`Downloading ${state.shots.length} photo${state.shots.length === 1 ? "" : "s"}`);
+  });
+  if (navigator.canShare) $("shareAll").hidden = false;
+  $("shareAll").addEventListener("click", async () => {
+    const files = state.shots.map((s) => new File([s.blob], s.name, { type: s.blob.type || "image/jpeg" }));
+    if (!navigator.canShare({ files })) return toast("This phone can't share that many files at once. Use Download all.");
+    try { await navigator.share({ files }); } catch (e) { if (e.name !== "AbortError") toast("Sharing didn't work. Use Download all."); }
+  });
+  $("clearAll").addEventListener("click", () => { $("clearConfirm").hidden = false; });
+  $("clearNo").addEventListener("click", () => { $("clearConfirm").hidden = true; });
+  $("clearYes").addEventListener("click", () => {
+    state.shots.forEach((s) => URL.revokeObjectURL(s.url)); state.shots = []; idb.clearShots(); renderShots();
+    $("clearConfirm").hidden = true; closeSheet("shots"); toast("Photos deleted");
+  });
+
+  // ---------- controls ----------
+  function setMode(m) {
+    state.mode = m; store.set("mode", m);
+    document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.mode === m)));
+    $("opacityRow").hidden = m === "off";
+    if (m !== "off" && !state.ref) toast("Take a photo or load one to use as the reference");
+    drawOverlay();
+  }
+  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  $("opacity").addEventListener("input", (e) => { state.opacity = +e.target.value; $("opacityOut").textContent = state.opacity + "%"; store.set("opacity", state.opacity); drawOverlay(); });
+  $("gridBtn").addEventListener("click", () => { state.grid = !state.grid; store.set("grid", state.grid); $("gridBtn").setAttribute("aria-pressed", String(state.grid)); drawGrid(); });
+  $("setName").value = store.get("setName", "product");
+  $("setName").addEventListener("change", (e) => store.set("setName", e.target.value.trim() || "product"));
+
+  // ---------- boot ----------
+  (async () => {
+    $("opacity").value = state.opacity; $("opacityOut").textContent = state.opacity + "%";
+    $("gridBtn").setAttribute("aria-pressed", String(state.grid)); $("autoRef").checked = state.autoRef;
+    setModeQuiet(state.mode);
+    const ref = await idb.getKV("ref"); if (ref) { try { await setReference(await blobToImage(ref), { save: false }); } catch {} }
+    const saved = (await idb.allShots()) || []; saved.sort((a, b) => a.t - b.t).forEach(addShot);
+    renderShots();
+    // Start straight away if permission was already given; otherwise wait for the button tap.
+    try { const p = await navigator.permissions?.query({ name: "camera" }); if (p?.state === "granted") startCamera(); } catch {}
+  })();
+  function setModeQuiet(m) { state.mode = m; document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.mode === m))); $("opacityRow").hidden = m === "off"; }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>

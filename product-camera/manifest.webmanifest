@@ -1,0 +1,14 @@
+{
+  "name": "Product Camera",
+  "short_name": "Product Cam",
+  "description": "Camera with a ghost or outline overlay of your last shot, so every product photo matches.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#101214",
+  "theme_color": "#101214",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
