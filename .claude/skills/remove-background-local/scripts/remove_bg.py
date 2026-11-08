@@ -3,7 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageFilter
 from rembg import new_session, remove
 
 EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
@@ -16,6 +16,16 @@ def parse_color(s):
     raise argparse.ArgumentTypeError("use a hex color like ffffff")
 
 
+def feather(alpha, amount):
+    """Soften a hard, jagged alpha edge. The soft edge is pulled slightly inward and
+    clipped to the original mask, so no background halo shows outside the subject."""
+    if amount <= 0:
+        return alpha
+    shrink = max(1, round(amount / 2))
+    soft = alpha.filter(ImageFilter.MinFilter(2 * shrink + 1)).filter(ImageFilter.GaussianBlur(amount / 2))
+    return ImageChops.multiply(soft, alpha)
+
+
 def process(src, dst, session, args):
     img = Image.open(src)
     out = remove(
@@ -25,6 +35,12 @@ def process(src, dst, session, args):
         alpha_matting=args.alpha_matting,
         post_process_mask=True,
     )
+    if args.feather:
+        if args.mask:
+            out = feather(out.convert("L"), args.feather)
+        else:
+            out = out.convert("RGBA")
+            out.putalpha(feather(out.getchannel("A"), args.feather))
     if args.crop and not args.mask:
         box = out.getbbox()
         if box:
@@ -51,6 +67,8 @@ def main():
                    help="isnet-general-use (default), u2net, u2net_human_seg, isnet-anime, birefnet-general, birefnet-portrait")
     p.add_argument("--mask", action="store_true", help="output the black/white mask instead of the cutout")
     p.add_argument("--alpha-matting", action="store_true", help="softer edges for hair/fur (slower)")
+    p.add_argument("--feather", type=float, nargs="?", const=2.0, default=0.0, metavar="PX",
+                   help="soften jagged edges; optional strength in pixels (default 2 if given without a number)")
     p.add_argument("--crop", action="store_true", help="crop to the subject")
     p.add_argument("--padding", type=int, default=0, help="pixels of padding around --crop")
     p.add_argument("--bg", type=parse_color, help="fill background with a hex color instead of transparency, e.g. ffffff")

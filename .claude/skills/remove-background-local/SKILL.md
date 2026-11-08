@@ -25,6 +25,7 @@ The first run in a fresh environment takes 1–2 minutes: it creates a Python en
 
 | Option | What it does |
 |---|---|
+| `--feather [PX]` | Smooth jagged, stair-stepped edges. Bare `--feather` is a light 2 px; `--feather 4` is softer. Put it after the input path. |
 | `--crop` | Crop to the subject. Add `--padding N` for N pixels of space around it. |
 | `--bg ffffff` | Fill the background with a hex color instead of leaving it transparent (white packshot, brand color). |
 | `--mask` | Output the black-and-white mask instead of the cutout. |
@@ -56,11 +57,13 @@ $S product.jpg product_white.jpg --bg ffffff --crop --padding 40   # white packs
 $S headshot.jpg --model u2net_human_seg --alpha-matting           # portrait with fine hair
 $S ./photos                                    # whole folder -> ./photos/cutouts/
 $S photo.jpg --mask                            # -> photo_mask.png
+$S photo.jpg --feather                         # smooth jagged edges (light)
 ```
 
 ## After running
 
 - Look at the result before reporting back (open the PNG with the Read tool). Check that the whole subject was kept and the background is gone.
+- If the edge looks jagged or stair-stepped, rerun with `--feather` (or `--feather 3`–`4` for softer). Keep it light on product shots, where crisp edges matter.
 - If parts of the subject went missing or background remains, try another model (`u2net_human_seg` for people, `u2net`, or a `birefnet-*` model) and compare.
 - Hand the user the output path(s).
 
