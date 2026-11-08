@@ -64,7 +64,7 @@ $S photo.jpg --feather                         # smooth jagged edges (light)
 
 - Look at the result before reporting back (open the PNG with the Read tool). Check that the whole subject was kept and the background is gone.
 - If the edge looks jagged or stair-stepped, rerun with `--feather` (or `--feather 3`–`4` for softer). Keep it light on product shots, where crisp edges matter.
-- If parts of the subject went missing or background remains, try another model (`u2net_human_seg` for people, `u2net`, or a `birefnet-*` model) and compare.
+- If parts of the subject went missing or background remains, try another model (`u2net_human_seg` for people, `u2net`, or a `birefnet-*` model) and compare. When the subject's color blends into a busy background (an animal against a fence or foliage, say), the default often clips pieces such as an ear; `birefnet-general` handles that best (about 1 minute per image on CPU).
 - Hand the user the output path(s).
 
 ## Limits

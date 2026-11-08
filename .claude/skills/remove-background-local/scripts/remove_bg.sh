@@ -30,8 +30,13 @@ fi
 if [ ! -s "$MODEL_DIR/$MODEL.onnx" ]; then
   echo "Downloading model $MODEL (one time)..." >&2
   mkdir -p "$MODEL_DIR"
+  case "$MODEL" in  # BiRefNet weights are published under longer filenames
+    birefnet-general)  REMOTE="BiRefNet-general-epoch_244" ;;
+    birefnet-portrait) REMOTE="BiRefNet-portrait-epoch_150" ;;
+    *)                 REMOTE="$MODEL" ;;
+  esac
   curl -fsSL --retry 3 -o "$MODEL_DIR/$MODEL.onnx.part" \
-    "https://github.com/danielgatis/rembg/releases/download/v0.0.0/$MODEL.onnx"
+    "https://github.com/danielgatis/rembg/releases/download/v0.0.0/$REMOTE.onnx"
   mv "$MODEL_DIR/$MODEL.onnx.part" "$MODEL_DIR/$MODEL.onnx"
 fi
 
