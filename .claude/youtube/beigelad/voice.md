@@ -65,7 +65,7 @@ part number) without slowing the beginner down.
 
 ## Words I never use
 
-NOT FILLED IN. Until the user says otherwise, avoid:
+Starting list, inferred from titles, not yet confirmed by the user. Avoid:
 - Hype and review-site words: "game-changer", "ultimate", "insane", "revolutionary", "must-have".
 - Corporate tech copy: "seamless", "elevate", "unlock", "streamline".
 - Long intros and "hey guys welcome back".
@@ -112,4 +112,8 @@ Upload schedule: none yet (user, 9 Nov 2026). Do not plan or promise dates on th
 behalf; suggest a rhythm only when asked (see the 9 Nov audit: one long fix video every two
 weeks, Shorts cut from it).
 
-NOT FILLED IN: swearing (none in this transcript), music.
+- Swearing: hardly ever, and never anything strong (user, 9 Nov 2026). Do not write swearing
+  into scripts.
+- Music: minimal. Only around the intro or outro, or under a printing timelapse. Never under
+  talking or step-by-step instructions. Free music; note the track and its licence in the
+  description when the licence asks for credit.
