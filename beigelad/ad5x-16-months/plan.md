@@ -12,7 +12,7 @@ Why: the Sharpie video gets 88.4% of views from YouTube search and 0.9% from sug
 Viewers arrive from search and leave; almost none move on to another video.
 - [x] Create a playlist "AD5X fixes": How to unclog ad5x nozzle, Stop Using Sharpie, Why AD5X Need
       NEW Nozzle?, Is the AD5X 3d printer good?. Add the maintenance video when it is live.
-- [ ] End screens on each AD5X video: one "watch next" to another AD5X fix, plus the playlist.
+- [x] End screens on each AD5X video: one "watch next" to another AD5X fix, plus the playlist.
       Clog video -> Sharpie. Sharpie -> clog. Nozzle -> clog.
 - [ ] Pinned comment on the clog video pointing to the Sharpie video for now (swap to the
       maintenance video once it is live).
