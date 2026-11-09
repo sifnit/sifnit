@@ -3,9 +3,10 @@
 YouTube: https://www.youtube.com/@ladbeige (channel id UC-hvflJCCpCXBrWmTEOOUZw)
 3D printing fixes, reviews and how-tos. Made in Queensland, Australia.
 
-Built on 9 Nov 2026 from what is public: the channel description, the last 14 long-video titles,
-20 Short captions and 10 thumbnails. No transcripts yet (YouTube blocked captions from the cloud
-session). Where a section says NOT FILLED IN, ask the user, do not invent it.
+Built on 9 Nov 2026 from the channel description, the last 14 long-video titles, 20 Short
+captions, 10 thumbnails, and the user-supplied transcript of the biggest video ("How to unclog ad5x
+nozzle And Make Things Worse.", 91k views, 6:35). Where a section says NOT FILLED IN, ask the
+user, do not invent it.
 
 Never blend with norstack (`.claude/youtube/norstack/voice.md`). Different channel, different
 register, different rules.
@@ -20,7 +21,35 @@ NOT FILLED IN: confirm this with the user, and whether beginners or tinkerers.
 
 ## How I actually talk
 
-Written register, from titles and captions. Spoken voice is NOT FILLED IN until a transcript exists.
+### On camera (from the 91k transcript)
+
+- Straight in, no intro, no channel name. Opens on the viewer's situation as "you":
+  "So you got your AD5X and you're getting a clog, or your filament isn't passing through here.
+  How do you get it out of here?"
+- Talks while doing. Hands on the machine, narrating each step as it happens: "grab the front
+  off", "push down and then it will pop out", "chop it clean again".
+- Second person instructions, plain verbs: grab, pop, push, pull, chuck, snip, chop.
+- Unscripted and honest. Self-corrects mid-sentence ("a screwdriver, a flat head screwdriver
+  sorry"), admits not knowing a part's name ("another little clippy, I don't know what to call
+  it, coupler clip or something"), and keeps the mistake in: "or I've created a whole new issue",
+  "I've definitely bunged it up somehow haven't I", "since I've really completely cooked this".
+- The mistake becomes the lesson: "this is why we do this stuff, to learn and also to break our
+  stuff". Then the real fix, explained: filament stuck cold between two parts, two screws off,
+  push it up and out.
+- Warnings from experience: "put your thumb against it, otherwise it's gonna literally fly across
+  the room, which I've had done before".
+- Practical tips with a number: heat to 260, do the cold pull "about three or four times just to
+  be sure". A "clue to look for": squiggly end instead of a clean cut.
+- Dry, cheeky humour: "grab some filament off the ground, which you always have on the ground",
+  "this is the fun part", "how tight to make it? well I don't".
+- Mid-video ask, one line, with a joke: "if you're enjoying this content on the AD5X, let me know
+  in the comments. If you don't like it, too bad."
+- Sign-off is a short recap, no pitch: "so there you go, a few different ways to get rid of
+  nozzle clogs or extruder clogs".
+- Fillers "um", "uh", "well", "okay" are natural speech. Fine on camera, cut the long ones in
+  the edit. Do not write them into scripts.
+
+### In writing (titles, Short captions)
 
 - Casual Australian, plain and a bit cheeky. Own words from the channel: "without the faff",
   "heaps good printer", "poop chute", "good times", "you tell me", "Bye Old Fella", "It's Alive!"
@@ -43,7 +72,9 @@ NOT FILLED IN. Until the user says otherwise, avoid:
 Printer model names exactly as owners type them (AD5X, Kobra 3, K1C, K2 Plus, U1). Fix, clog,
 nozzle, purge, belt, wobble, swap. "Heaps". "Faff".
 
-NOT FILLED IN: on-camera catchphrases and sign-off.
+Spoken: "so you got your...", "grab", "pop it out", "chuck it back in", "snip it off", "bunged
+it up", "cooked", "a little dangle", "give it a bit of a robustness", "hey" as a tag, "well",
+"so there you go".
 
 ## What I will not claim
 
@@ -60,6 +91,13 @@ NOT FILLED IN: on-camera catchphrases and sign-off.
 - Titles: model name plus symptom, under 55 characters, one or two words in caps for emphasis.
 - Thumbnails: the printer part close up, 1 to 3 big words ("Clog", "Add text", "It won"),
   sometimes a hand-drawn word. Readable at feed size.
-- On camera: sometimes, hands and machine mostly. Mic: Ulanzi A100 lapel (from a Short).
+- On camera: hands and machine mostly, voice over the work. Mic: Ulanzi A100 lapel (from a Short).
+- No intro. First line is the viewer's problem. One mid-video comment ask. Recap sign-off.
+- Hook note: the 91k opening scores 47 (WEAK) on hookscore. It is a clear question but names no
+  cost. A stronger version keeps the voice and adds the stake, for example "If this filament snaps
+  inside your AD5X, pulling it from the IFS won't save you. Here's what does." Treat the score as
+  a reason to look again, not a verdict: that opening already earned 91k from search.
+- Captions: auto-captions mangle the model name ("80 five x", "85 x") and numbers ("2 60"). Fix
+  them before publishing; the model name is what people search.
 
-NOT FILLED IN: intro or none, swearing, music, sign-off, upload schedule.
+NOT FILLED IN: swearing (none in this transcript), music, upload schedule.
