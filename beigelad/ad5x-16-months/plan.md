@@ -65,6 +65,9 @@ https://wiki.flashforge.com/en/ad5x/maintenance. Use the grease it specifies and
 5. Proof: same test print before and after (same file, same filament), side by side, and the
    sound. If nothing changed, say so.
 6. Sign-off: "so there you go", what I'll do now and how often.
+   Tease, 10-15s, before the sign-off: show the BIQU light on or near the AD5X, "next video".
+   If it is on screen, say it was free: "BIQU sent me this light for free, review's next."
+   No verdict yet; that is the next video.
 7. Music: only under the before/after timelapse.
 
 ## Shorts from this shoot
