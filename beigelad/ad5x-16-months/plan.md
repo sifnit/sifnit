@@ -48,3 +48,9 @@ https://wiki.flashforge.com/en/ad5x/maintenance. Use the grease it specifies and
 ## After the shoot
 Send the auto-captions: description, chapters (/yt-chapters), cut list (/edit or /yt-edit).
 Fix "AD5X" in the captions (auto-captions write "80 five x").
+
+## Spanish
+Auto-dubbing is on for the channel (seen on the 91k video, 9 Nov 2026: Spanish title,
+description and dub auto-generated and published). After upload: listen to the first minute of
+the Spanish dub, check "AD5X" is said right, and check the Spanish title reads naturally.
+Optional: a Spanish thumbnail with the word swapped (Thumbnail -> Add on the Spanish language entry).
