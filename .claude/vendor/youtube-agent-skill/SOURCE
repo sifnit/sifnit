@@ -2,4 +2,4 @@ Source: https://github.com/Jakeschincariol/youtube-agent-skill
 Commit: a2feb21 (2026-09-16)
 License: MIT (see LICENSE)
 Installed: .claude/skills/yt-*
-Voice template: voice.md (filled copy lives at .claude/youtube/voice.md; yt-* skills patched to read it)
+Voice template: voice.md (filled copies live at .claude/youtube/<channel>/voice.md; yt-* skills patched to read it)

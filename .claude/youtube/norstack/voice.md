@@ -1,7 +1,7 @@
 # voice.md
 
-Voice profile for the yt-* skills. Built from the rules already written in this repo's
-`script`, `copy` and `thumb` skills. Where a section says NOT FILLED IN, nothing is written down
+Voice profile for the norstack psychology explainer channel. Built from the rules in this repo's
+`script`, `copy` and `thumb` skills. Never blend with BeigeLad (`.claude/youtube/beigelad/voice.md`). Where a section says NOT FILLED IN, nothing is written down
 yet: ask the user, do not invent it. If a filled-in `.claude/skills/profile/profile.md` exists,
 it wins over this file for brand, palette and project.
 
