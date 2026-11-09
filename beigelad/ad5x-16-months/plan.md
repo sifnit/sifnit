@@ -34,6 +34,8 @@ for you." (56)
 - Thumbnail: NEVER OILED. Close-up of the dirty rod or paper towel.
 
 ## Before filming
+- [ ] Rewatch the July 2025 review. Note 2 or 3 claims or moments to compare against now
+      (timestamps), so they can be pulled into the edit.
 Read the Flashforge AD5X wiki Maintenance page (Basic, Intermediate, Advanced, IFS):
 https://wiki.flashforge.com/en/ad5x/maintenance. Use the grease it specifies and name it on camera.
 
@@ -41,6 +43,8 @@ https://wiki.flashforge.com/en/ad5x/maintenance. Use the grease it specifies and
 1. Cold open: the printer as it is. Say the hook.
 2. History, about 30s: how long owned, total print time if the printer shows it (else say you
    don't know), the clog from the 91k video, the nozzle swap.
+   Then the callback: "Here's what I said 16 months ago... was I right?" Use 2 or 3 clips from
+   the July 2025 review ("Is the AD5X 3d printer good?") and answer each one on camera now.
 3. Every check: before close-up, what I did, after close-up.
    - [ ] Rods/rails: white paper towel wipe. Show what comes off.
    - [ ] Grease: lead screws and guide rails per the wiki. Name the product.
