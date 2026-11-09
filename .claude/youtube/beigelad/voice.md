@@ -65,7 +65,7 @@ part number) without slowing the beginner down.
 
 ## Words I never use
 
-Starting list, inferred from titles, not yet confirmed by the user. Avoid:
+Confirmed by the user (9 Nov 2026). Never write these:
 - Hype and review-site words: "game-changer", "ultimate", "insane", "revolutionary", "must-have".
 - Corporate tech copy: "seamless", "elevate", "unlock", "streamline".
 - Long intros and "hey guys welcome back".
