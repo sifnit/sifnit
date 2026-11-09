@@ -52,6 +52,8 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 .goal { text-align: left; border: 1.5px solid var(--line); background: var(--panel); color: var(--text); border-radius: 12px; padding: 10px 12px; }
 .goal small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .goal[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.goal.hot { grid-column: 1 / -1; }
+.goal.hot[aria-pressed="true"] { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn) inset; background: var(--warn-bg); }
 .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .slot { border: 1.5px solid var(--line); background: var(--panel); color: var(--text); border-radius: 12px; padding: 10px 6px; text-align: center; font-size: 12.5px; }
 .slot i { display: block; width: 26px; height: 26px; border-radius: 50%; margin: 0 auto 6px; border: 1px solid var(--line); }
@@ -169,6 +171,7 @@ const GOALS = {
   everyday: { label: 'Everyday', desc: 'Good for most things',      layer: 0.20, walls: 3, infill: 15, pattern: 'gyroid',    rate: 15 },
   strong:   { label: 'Strong',   desc: 'Brackets, clips, tools',    layer: 0.20, walls: 5, infill: 40, pattern: 'gyroid',    rate: 12 },
   pretty:   { label: 'Pretty',   desc: 'Display pieces, smooth',    layer: 0.12, walls: 3, infill: 15, pattern: 'gyroid',    rate: 8  },
+  speedtest:{ label: 'Speed test', desc: 'Everything flat out. Will look rough, that is the point.', layer: 0.32, walls: 2, infill: 5, pattern: 'line', rate: 30, speedTest: true },
 };
 const MATERIALS = {
   PLA:  { nozzle: 210, bed: 60, density: 1.24 },
@@ -306,8 +309,54 @@ function analyze(g) {
       }
     }
   }
+  // Small lips: group hanging faces into connected islands. An island only a
+  // couple of mm wide (2 x area / outline length) prints fine without supports.
+  let smallOverhang = 0;
+  if (overhang > 0) {
+    const r = v => Math.round(v * 1000);
+    const vk = i => `${r(p[i])},${r(p[i + 1])},${r(p[i + 2])}`;
+    const faceInfo = f => {
+      a.fromArray(p, f * 9); b.fromArray(p, f * 9 + 3); c.fromArray(p, f * 9 + 6);
+      n.crossVectors(e1.subVectors(b, a), e2.subVectors(c, a));
+      const len = n.length();
+      return { area: len / 2, nz: len ? n.z / len : 0 };
+    };
+    const edges = new Map(), list = [];
+    for (let f = 0; f < faces; f++) if (flags[f]) {
+      list.push(f);
+      const k = [f * 9, f * 9 + 3, f * 9 + 6];
+      for (const [x, y] of [[0, 1], [1, 2], [2, 0]]) {
+        const kx = vk(k[x]), ky = vk(k[y]);
+        if (kx === ky) continue;
+        const key = kx < ky ? kx + '|' + ky : ky + '|' + kx;
+        let e = edges.get(key);
+        if (!e) {
+          const dx = p[k[x]] - p[k[y]], dy = p[k[x] + 1] - p[k[y] + 1], dz = p[k[x] + 2] - p[k[y] + 2];
+          edges.set(key, e = { faces: [], len: Math.hypot(dx, dy, dz) });
+        }
+        e.faces.push(f);
+      }
+    }
+    const parent = new Map(list.map(f => [f, f]));
+    const find = f => { while (parent.get(f) !== f) { parent.set(f, parent.get(parent.get(f))); f = parent.get(f); } return f; };
+    for (const e of edges.values()) for (let i = 1; i < e.faces.length; i++) parent.set(find(e.faces[i]), find(e.faces[0]));
+    const islands = new Map();
+    for (const f of list) {
+      const root = find(f);
+      if (!islands.has(root)) islands.set(root, { area: 0, outline: 0, faces: [] });
+      const o = islands.get(root); o.area += faceInfo(f).area; o.faces.push(f);
+    }
+    for (const e of edges.values()) if (e.faces.length === 1) islands.get(find(e.faces[0])).outline += e.len;
+    for (const o of islands.values()) {
+      const width = o.outline ? 2 * o.area / o.outline : Infinity;
+      if (width <= 2.5) {
+        for (const f of o.faces) { const fi = faceInfo(f); flags[f] = 0; overhang -= fi.area; if (fi.nz < -0.99) flatOverhang -= fi.area; }
+        smallOverhang += o.area;
+      }
+    }
+  }
   const s = new THREE.Vector3(); g.boundingBox.getSize(s);
-  return { area, overhang, flatOverhang, contact, volume: Math.abs(volume), size: s, flags };
+  return { area, overhang, flatOverhang, smallOverhang, contact, volume: Math.abs(volume), size: s, flags };
 }
 
 function countOpenEdges(g) {
@@ -318,6 +367,7 @@ function countOpenEdges(g) {
   const edges = new Map();
   for (let f = 0; f < p.length; f += 9) {
     const k = [key(f), key(f + 3), key(f + 6)];
+    if (k[0] === k[1] || k[1] === k[2] || k[0] === k[2]) continue; // zero-area sliver
     for (const [x, y] of [[0, 1], [1, 2], [2, 0]]) {
       const e = k[x] < k[y] ? k[x] + '|' + k[y] : k[y] + '|' + k[x];
       edges.set(e, (edges.get(e) || 0) + 1);
@@ -447,7 +497,7 @@ function getIssues() {
     done: 'Will be repaired when sliced',
   });
 
-  if (mat === 'TPU' && state.goal === 'fast') issues.push({
+  if (mat === 'TPU' && (state.goal === 'fast' || state.goal === 'speedtest')) issues.push({
     id: 'tpu', title: 'TPU can\'t print fast', detail: 'Flexible filament jams at speed', fix: 'Use Everyday',
     apply() { const prev = state.goal; state.goal = 'everyday'; return () => state.goal = prev; },
     done: 'Switched to Everyday for TPU',
@@ -526,6 +576,14 @@ function settings() {
     nozzle_temperature: mat.nozzle,
     hot_plate_temp: mat.bed,
     auto_repair: state.repair,
+    // Speed test: AD5X advertised maximums. First layer stays slow so it sticks.
+    ...(goal.speedTest ? {
+      outer_wall_speed: 600, inner_wall_speed: 600, sparse_infill_speed: 600,
+      internal_solid_infill_speed: 600, top_surface_speed: 400, gap_infill_speed: 400,
+      travel_speed: 600, initial_layer_speed: 60, initial_layer_infill_speed: 80,
+      default_acceleration: 20000, outer_wall_acceleration: 20000, inner_wall_acceleration: 20000,
+      travel_acceleration: 20000, filament_max_volumetric_speed: 35,
+    } : {}),
   };
 }
 
@@ -542,7 +600,7 @@ function el(tag, attrs = {}, ...kids) {
 function render() {
   const goals = document.getElementById('goals');
   goals.replaceChildren(...Object.entries(GOALS).map(([id, g]) =>
-    el('button', { class: 'goal', 'aria-pressed': state.goal === id, onclick: () => { state.goal = id; rebuild(); render(); } },
+    el('button', { class: g.speedTest ? 'goal hot' : 'goal', 'aria-pressed': state.goal === id, onclick: () => { state.goal = id; rebuild(); render(); } },
       g.label, el('small', {}, g.desc))));
 
   const slots = document.getElementById('slots');
@@ -567,6 +625,13 @@ function render() {
     el('div', {}, el('div', { class: 't' }, '✓ ' + f.label),
       f.id === 'supports' ? el('div', { class: 'd' }, (p => `${p.label} · top gap ${p.support_top_z_distance} mm · side ${p.support_object_xy_distance} mm · ${p.support_interface_top_layers} interface layers`)(supportPlan())) : ''),
     el('button', { class: 'btn', onclick: () => { f.undo(); state.applied.splice(idx, 1); rebuild(); } }, 'Undo'))));
+  if (current.a.smallOverhang > 0 && !issues.some(i => i.id === 'supports') && !state.supports)
+    rows.push(el('div', { class: 'check done' }, el('div', {},
+      el('div', { class: 't' }, '✓ Small lips print fine'),
+      el('div', { class: 'd' }, `${current.a.smallOverhang.toFixed(0)} mm² overhangs by only a mm or two, no supports needed`))));
+  if (GOALS[state.goal].speedTest) rows.push(el('div', { class: 'check issue' }, el('div', {},
+    el('div', { class: 't' }, 'Speed test mode'),
+    el('div', { class: 'd' }, 'Max speed and acceleration. Expect ringing, rough walls, maybe a failed print.'))));
   if (!issues.length) rows.unshift(el('div', { class: 'allclear' }, '✓ Ready to print'));
   checks.replaceChildren(...rows);
 
@@ -575,7 +640,7 @@ function render() {
     ['Quality', `${goal.label} · ${goal.layer} mm`], ['Slot', `${state.slot + 1} · ${SLOTS[state.slot].mat} ${SLOTS[state.slot].name}`]];
   sum.replaceChildren(...pairs.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
   printBtn.disabled = false;
-  printBtn.textContent = issues.length ? `Print anyway (${issues.length} unfixed)` : 'Print';
+  printBtn.textContent = goal.speedTest ? 'Run speed test' : issues.length ? `Print anyway (${issues.length} unfixed)` : 'Print';
 }
 
 // ---------- loading ----------
@@ -601,8 +666,10 @@ async function sample(kind) {
     let font;
     try { font = await getFont(); } catch { alert('Could not load the font (needs internet).'); return; }
     if (kind === 'coin') {
-      // 40 mm coin, 3 mm thick, BEIGELAD raised 0.8 mm on top
-      const disc = new THREE.CylinderGeometry(20, 20, 3, 96).rotateX(Math.PI / 2).translate(0, 0, 1.5);
+      // 40 mm coin, 3 mm thick, top 1 mm sticks out 1 mm past the base (a lip),
+      // BEIGELAD raised 0.8 mm on top
+      const profile = [[0, 0], [19, 0], [19, 2], [20, 2], [20, 3], [0, 3]].map(([r, h]) => new THREE.Vector2(r, h));
+      const disc = new THREE.LatheGeometry(profile, 96).rotateX(Math.PI / 2);
       const label = text(font, 'BEIGELAD', 4.6, 0.9).translate(0, 0, 2.9);
       loadGeometry(mergeGeometries([posOnly(disc), posOnly(label)]), 'beigelad-coin.stl');
     } else {
