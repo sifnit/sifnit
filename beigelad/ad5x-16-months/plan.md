@@ -3,6 +3,20 @@
 Status: plan locked 9 Nov 2026. Never oiled or serviced (confirmed by the user). Script, chapters
 and cut list come after the shoot, from the real auto-captions.
 
+## Deadline
+Publish before mid-December 2026. The 91k clog video jumped from about 150 to about 700 views a
+day just before mid-December 2025, likely new AD5X owners after sales and Christmas (not proven).
+
+## Do now, before the shoot (about 20 min in Studio, no filming)
+Why: the Sharpie video gets 88.4% of views from YouTube search and 0.9% from suggested videos.
+Viewers arrive from search and leave; almost none move on to another video.
+- [ ] Create a playlist "AD5X fixes": How to unclog ad5x nozzle, Stop Using Sharpie, Why AD5X Need
+      NEW Nozzle?, Is the AD5X 3d printer good?. Add the maintenance video when it is live.
+- [ ] End screens on each AD5X video: one "watch next" to another AD5X fix, plus the playlist.
+      Clog video -> Sharpie. Sharpie -> clog. Nozzle -> clog.
+- [ ] Pinned comment on the clog video pointing to the Sharpie video for now (swap to the
+      maintenance video once it is live).
+
 ## Why this video
 - AD5X / Adventurer 5M maintenance videos: 33k-83k views. No owner "one year on" AD5X video yet.
 - Fix and how-to videos are what work on this channel (91k, 26k, 17k, 13k, 13k).
@@ -44,6 +58,12 @@ https://wiki.flashforge.com/en/ad5x/maintenance. Use the grease it specifies and
 - Paper towel wipe
 - Belt pluck before/after
 - Before/after test print
+
+## On publish day
+- [ ] Add it to the "AD5X fixes" playlist.
+- [ ] End screen on the maintenance video -> clog video.
+- [ ] Swap the pinned comments on the clog and Sharpie videos to link the maintenance video.
+- [ ] Update the end screens on the clog and Sharpie videos to point to it.
 
 ## After the shoot
 Send the auto-captions: description, chapters (/yt-chapters), cut list (/edit or /yt-edit).
