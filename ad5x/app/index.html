@@ -106,6 +106,8 @@ dialog::backdrop { background: rgba(0,0,0,0.4); }
         <p>Drop an STL file here</p>
         <div class="row">
           <button class="btn primary" id="pick">Choose file</button>
+          <button class="btn" data-sample="coin">Sample: coin</button>
+          <button class="btn" data-sample="b">Sample: standing B</button>
           <button class="btn" data-sample="hook">Sample: hook</button>
           <button class="btn" data-sample="pin">Sample: tall pin</button>
         </div>
@@ -157,6 +159,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 // ---------- printer + presets ----------
 const BED = 220, USABLE = 218;
@@ -170,6 +174,12 @@ const MATERIALS = {
   PLA:  { nozzle: 210, bed: 60, density: 1.24 },
   PETG: { nozzle: 240, bed: 70, density: 1.27 },
   TPU:  { nozzle: 225, bed: 45, density: 1.21 },
+};
+// Support starting points per filament (to be confirmed with test prints).
+const SUPPORT = {
+  PLA:  { topGap: 0.20, sideGap: 0.35, interface: 2 },
+  PETG: { topGap: 0.28, sideGap: 0.50, interface: 3 },
+  TPU:  { topGap: 0.20, sideGap: 0.40, interface: 2 },
 };
 // Demo slot contents. Later this comes from the printer.
 const SLOTS = [
@@ -260,7 +270,7 @@ function analyze(g) {
   const minZ = g.boundingBox.min.z;
   const faces = p.length / 9;
   const flags = new Uint8Array(faces);
-  let area = 0, overhang = 0, contact = 0, volume = 0;
+  let area = 0, overhang = 0, flatOverhang = 0, contact = 0, volume = 0;
   const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
   const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), n = new THREE.Vector3();
   for (let f = 0; f < faces; f++) {
@@ -273,10 +283,31 @@ function analyze(g) {
     area += fa;
     const onBed = a.z < minZ + 0.05 && b.z < minZ + 0.05 && c.z < minZ + 0.05;
     if (onBed && nz < -0.99) contact += fa;
-    else if (nz < OVERHANG_NZ) { overhang += fa; flags[f] = 1; }
+    else if (nz < OVERHANG_NZ) { overhang += fa; flags[f] = 1; if (nz < -0.99) flatOverhang += fa; }
+  }
+  // An underside buried inside another part (e.g. raised text on a coin) is not
+  // hanging in the air. Cast a ray up from just below the face: an odd number
+  // of hits means that point is inside the model.
+  const flagged = flags.reduce((n, v) => n + v, 0);
+  if (flagged && flagged <= 5000) {
+    const probe = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+    const ray = new THREE.Raycaster(); ray.firstHitOnly = false;
+    const up = new THREE.Vector3(0, 0, 1), q = new THREE.Vector3();
+    for (let f = 0; f < faces; f++) {
+      if (!flags[f]) continue;
+      a.fromArray(p, f * 9); b.fromArray(p, f * 9 + 3); c.fromArray(p, f * 9 + 6);
+      q.copy(a).add(b).add(c).divideScalar(3); q.z -= 0.02;
+      ray.set(q, up);
+      if (ray.intersectObject(probe, false).length % 2 === 1) {
+        n.crossVectors(e1.subVectors(b, a), e2.subVectors(c, a));
+        const fa = n.length() / 2;
+        flags[f] = 0; overhang -= fa;
+        if (n.z / (2 * fa) < -0.99) flatOverhang -= fa;
+      }
+    }
   }
   const s = new THREE.Vector3(); g.boundingBox.getSize(s);
-  return { area, overhang, contact, volume: Math.abs(volume), size: s, flags };
+  return { area, overhang, flatOverhang, contact, volume: Math.abs(volume), size: s, flags };
 }
 
 function countOpenEdges(g) {
@@ -297,10 +328,18 @@ function countOpenEdges(g) {
   return open;
 }
 
+const cache = new Map();
+function placed(rot, scale) {
+  const k = rot + '|' + scale;
+  if (!cache.has(k)) { const g = place(rot, scale); cache.set(k, { g, a: analyze(g) }); }
+  const { g, a } = cache.get(k);
+  return { g: g.clone(), a };
+}
+
 function bestRotation() {
   let best = { rot: state.rot, score: Infinity };
   ROTS.forEach((_, r) => {
-    const a = analyze(place(r, state.scale));
+    const { a } = placed(r, state.scale);
     const score = a.overhang - a.contact * 0.3;
     if (score < best.score - 1) best = { rot: r, score, a };
   });
@@ -311,8 +350,7 @@ function bestRotation() {
 let mesh, current;
 function rebuild() {
   if (!state.base) return;
-  const g = place(state.rot, state.scale);
-  const a = analyze(g);
+  const { g, a } = placed(state.rot, state.scale);
   current = { g, a };
   const model = new THREE.Color(css('--model')), red = new THREE.Color(css('--overhang'));
   const col = new Float32Array(g.attributes.position.count * 3);
@@ -352,6 +390,7 @@ function loadGeometry(geom, name) {
   g.translate(-c.x, -c.y, -c.z);
   Object.assign(state, { name, base: g, rot: 0, scale: 1, supports: false, brim: false, repair: false, applied: [] });
   state.openEdges = countOpenEdges(g);
+  cache.clear();
   document.getElementById('drop').classList.add('hidden');
   document.getElementById('fileinfo').classList.remove('hidden');
   document.getElementById('fname').textContent = name;
@@ -392,7 +431,7 @@ function getIssues() {
   if (a.overhang > Math.max(25, a.area * 0.01) && !state.supports) issues.push({
     id: 'supports', title: 'Parts hang in the air', detail: `${a.overhang.toFixed(0)} mm² would droop (shown red)`, fix: 'Add supports',
     apply() { state.supports = true; return () => state.supports = false; },
-    done: state.goal === 'pretty' ? 'Tree supports added' : 'Supports added',
+    done: 'Supports added',
   });
 
   const tippy = a.contact < 150 || s.z / Math.sqrt(Math.max(a.contact, 1)) > 4;
@@ -446,6 +485,27 @@ function estimate() {
   return { grams, secs };
 }
 
+// Which supports and what gaps: filament sets the base, goal and shape adjust it.
+function supportPlan() {
+  const a = current.a, base = SUPPORT[SLOTS[state.slot].mat];
+  const flat = a.overhang > 0 && a.flatOverhang / a.overhang > 0.7 && a.overhang > 400;
+  const tree = !flat || state.goal === 'pretty' || SLOTS[state.slot].mat === 'TPU';
+  let topGap = base.topGap, iface = base.interface;
+  if (state.goal === 'pretty') { topGap = Math.max(0.15, topGap - 0.05); iface += 1; }
+  if (state.goal === 'fast') { topGap += 0.05; iface = Math.max(1, iface - 1); }
+  return {
+    tree, label: tree ? 'Tree (organic)' : 'Normal',
+    support_type: tree ? 'tree(auto)' : 'normal(auto)',
+    support_style: tree ? 'organic' : 'default',
+    support_top_z_distance: +topGap.toFixed(2),
+    support_bottom_z_distance: +topGap.toFixed(2),
+    support_object_xy_distance: base.sideGap,
+    support_interface_top_layers: iface,
+    support_on_build_plate_only: true,
+    support_threshold_angle: 45,
+  };
+}
+
 function settings() {
   const goal = GOALS[state.goal], slot = SLOTS[state.slot], mat = MATERIALS[slot.mat];
   return {
@@ -458,7 +518,7 @@ function settings() {
     sparse_infill_density: `${goal.infill}%`,
     sparse_infill_pattern: goal.pattern,
     enable_support: state.supports,
-    support_type: state.supports ? (state.goal === 'pretty' ? 'tree(auto)' : 'normal(auto)') : null,
+    ...(state.supports ? (({ tree, label, ...orca }) => orca)(supportPlan()) : {}),
     brim_type: state.brim ? 'outer_only' : 'no_brim',
     brim_width: state.brim ? 5 : 0,
     filament_type: slot.mat,
@@ -504,7 +564,8 @@ function render() {
     el('div', {}, el('div', { class: 't' }, i.title), el('div', { class: 'd' }, i.detail)),
     el('button', { class: 'btn', onclick: () => applyFix(i) }, i.fix)));
   state.applied.forEach((f, idx) => rows.push(el('div', { class: 'check done' },
-    el('div', {}, el('div', { class: 't' }, '✓ ' + f.label)),
+    el('div', {}, el('div', { class: 't' }, '✓ ' + f.label),
+      f.id === 'supports' ? el('div', { class: 'd' }, (p => `${p.label} · top gap ${p.support_top_z_distance} mm · side ${p.support_object_xy_distance} mm · ${p.support_interface_top_layers} interface layers`)(supportPlan())) : ''),
     el('button', { class: 'btn', onclick: () => { f.undo(); state.applied.splice(idx, 1); rebuild(); } }, 'Undo'))));
   if (!issues.length) rows.unshift(el('div', { class: 'allclear' }, '✓ Ready to print'));
   checks.replaceChildren(...rows);
@@ -525,7 +586,31 @@ async function loadFile(file) {
   catch (e) { alert('Could not read that file: ' + e.message); }
 }
 
-function sample(kind) {
+const FONT_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json';
+let fontPromise;
+const getFont = () => fontPromise ||= new FontLoader().loadAsync(FONT_URL);
+const posOnly = g => { g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (k !== 'position') g.deleteAttribute(k); return g; };
+const text = (font, str, size, depth) => {
+  const g = new TextGeometry(str, { font, size, height: depth, curveSegments: 6, bevelEnabled: false });
+  g.computeBoundingBox(); const b = g.boundingBox;
+  return g.translate(-(b.min.x + b.max.x) / 2, -(b.min.y + b.max.y) / 2, 0);
+};
+
+async function sample(kind) {
+  if (kind === 'coin' || kind === 'b') {
+    let font;
+    try { font = await getFont(); } catch { alert('Could not load the font (needs internet).'); return; }
+    if (kind === 'coin') {
+      // 40 mm coin, 3 mm thick, BEIGELAD raised 0.8 mm on top
+      const disc = new THREE.CylinderGeometry(20, 20, 3, 96).rotateX(Math.PI / 2).translate(0, 0, 1.5);
+      const label = text(font, 'BEIGELAD', 4.6, 0.9).translate(0, 0, 2.9);
+      loadGeometry(mergeGeometries([posOnly(disc), posOnly(label)]), 'beigelad-coin.stl');
+    } else {
+      // Letter B 40 mm tall, 10 mm thick, standing upright
+      loadGeometry(posOnly(text(font, 'B', 40, 10).rotateX(Math.PI / 2)), 'standing-b.stl');
+    }
+    return;
+  }
   const box = (w, d, h, x, y, z) => new THREE.BoxGeometry(w, d, h).translate(x, y, z).toNonIndexed();
   if (kind === 'hook') loadGeometry(mergeGeometries([box(16, 16, 60, 0, 0, 30), box(70, 16, 10, 0, 0, 65)]), 'sample-hook.stl');
   else loadGeometry(new THREE.CylinderGeometry(4, 4, 80, 24).rotateX(Math.PI / 2).toNonIndexed(), 'sample-pin.stl');
@@ -552,7 +637,7 @@ const dlg = document.getElementById('dlg');
 document.getElementById('print').onclick = () => {
   const s = settings(), est = estimate();
   const pairs = [['Model', s.model], ['Quality', `${GOALS[state.goal].label} · ${s.layer_height} mm`],
-    ['Walls / infill', `${s.wall_loops} · ${s.sparse_infill_density}`], ['Supports', s.enable_support ? s.support_type : 'none'],
+    ['Walls / infill', `${s.wall_loops} · ${s.sparse_infill_density}`], ['Supports', s.enable_support ? `${supportPlan().label} · ${s.support_top_z_distance} mm gap` : 'none'],
     ['Brim', state.brim ? '5 mm' : 'none'], ['Filament', `Slot ${s.filament_slot} · ${s.filament_type} ${s.nozzle_temperature}°C`],
     ['Time', '~' + fmtTime(est.secs)], ['Weight', `~${est.grams.toFixed(0)} g`]];
   document.getElementById('dlgsum').replaceChildren(...pairs.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
@@ -566,7 +651,7 @@ document.getElementById('dlgjson').onclick = () => {
 };
 
 render();
-window.__app = { state, sample, fixAll, getIssues: () => state.base ? getIssues() : [] };
+window.__app = { state, sample, fixAll, getIssues: () => state.base ? getIssues() : [], geometry: () => current && current.g, supportPlan: () => supportPlan() };
 </script>
 </body>
 </html>
