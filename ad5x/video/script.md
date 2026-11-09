@@ -114,7 +114,7 @@ Not-advice card (installing mods): "Installing ZMOD is at your own risk. Check t
 ## Sources
 - ZMOD project (ghzserg). GitHub. https://github.com/ghzserg/zmod
 - ZMOD wiki. https://wiki.zmod.link
-- SimplyPrint (2025). Setting up SimplyPrint on Flashforge AD5X (firmware 1.0.2 to 1.1.7, install up to 40 min, Moonraker port 7125). https://simplyprint.io/setup-guide/flashforge/ad5x/on-printer
+- SimplyPrint. Setting up SimplyPrint on Flashforge AD5X (firmware 1.0.2 to 1.1.7, install up to 40 min, Moonraker port 7125). https://simplyprint.io/setup-guide/flashforge/ad5x/on-printer
 - Tom's Hardware. Flashforge AD5X review. https://www.tomshardware.com/3d-printing/flashforge-ad5x-review
 - Flashforge. Orca-Flashforge. https://www.flashforge.com/pages/orca-flashforge
 - Own footage: stock-test.gcode run, Wi-Fi log. Files in this repo, `ad5x/`.
