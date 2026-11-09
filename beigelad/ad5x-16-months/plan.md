@@ -34,8 +34,17 @@ for you." (56)
 - Thumbnail: NEVER OILED. Close-up of the dirty rod or paper towel.
 
 ## Before filming
-- [ ] Rewatch the July 2025 review. Note 2 or 3 claims or moments to compare against now
-      (timestamps), so they can be pulled into the edit.
+- [x] Pick callback clips from the July 2025 review ("Is the AD5X 3d printer good?",
+      transcript supplied 9 Nov 2026). Timestamps from the auto-captions; check them in the edit.
+      1. 3:44-4:11 Nozzle guide: "use one nozzle for similar filaments... if you switch nozzles
+         it actually can clog because it doesn't fully flush out". Now: did it clog? (the 91k
+         clog video and "Why AD5X Need NEW Nozzle?" say yes). Strongest callback.
+      2. 9:36-10:05 "if you get filament stuck here, which can happen from time to time... this
+         filament here is like six years old". Now: still using old filament? stuck since?
+      3. 12:38-12:49 "I like the rusticness of it... open air... 3D printers shouldn't be so
+         polished". Now: what 16 months of open air left on the rods (the paper towel wipe).
+      Backup: 1:21-1:26 "Sticks really well to the bed. I haven't had any issues with the bed."
+      Now: the build plate check.
 Read the Flashforge AD5X wiki Maintenance page (Basic, Intermediate, Advanced, IFS):
 https://wiki.flashforge.com/en/ad5x/maintenance. Use the grease it specifies and name it on camera.
 

@@ -49,6 +49,12 @@ part number) without slowing the beginner down.
   in the comments. If you don't like it, too bad."
 - Sign-off is a short recap, no pitch: "so there you go, a few different ways to get rid of
   nozzle clogs or extruder clogs".
+  Longer videos: "I've been BeigeLad and this has been [what we did]... Hope you enjoyed. Bye."
+- Like/subscribe ask, once, mid-video, deadpan: "can you check us a like or subscribe? I don't
+  care. But, you know, apparently YouTube cares. So be nice." (July 2025 AD5X review)
+- Talks to what is in the room: the printer ("Hello. Are you even on?"), a bug ("What are you
+  doing, Mr. Bug?"), names things ("Door Man"). Keep these moments in the edit, they are the
+  personality; cut the dead air around them.
 - Fillers "um", "uh", "well", "okay" are natural speech. Fine on camera, cut the long ones in
   the edit. Do not write them into scripts.
 
