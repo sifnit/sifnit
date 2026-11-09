@@ -17,7 +17,10 @@ Someone who owns a specific budget printer (Flashforge AD5X, Anycubic Kobra 3, C
 K2 Plus, Snapmaker U1) and has a problem with it right now: a clog, a snapped belt, a wobble, a
 purge setting that will not stick. They searched the model name plus the symptom.
 
-NOT FILLED IN: confirm this with the user, and whether beginners or tinkerers.
+Mostly beginners, some tinkerers (confirmed by the user, 9 Nov 2026). Write for the beginner:
+name each part as you touch it, say why a step matters, and do not assume they own spare parts
+or know slicer jargon. Give the tinkerers one extra detail per video (the cause, a setting, a
+part number) without slowing the beginner down.
 
 ## How I actually talk
 
@@ -81,7 +84,12 @@ it up", "cooked", "a little dangle", "give it a bit of a robustness", "hey" as a
 - No print-quality, speed or reliability numbers that were not measured on camera.
 - No "this fixes every clog" claims. Say what fixed it on this printer, and say if it later
   stopped working.
-- Disclose any free or sponsored printer. NOT FILLED IN: does the channel get review units?
+- No review units from brands (confirmed by the user). Bought printers are the default, and that
+  independence is part of the "honest reviews" promise. Say so when it matters.
+- Free products get disclosed, every time. Pending: a BIQU light, given free. Say it on camera
+  in the first minute ("BIQU sent me this light for free, they haven't seen this video"), say it
+  in the description, and tick YouTube's paid promotion box. Free still counts. Review it the
+  same way as anything bought: what is good, what is not.
 
 ## My format
 
@@ -100,4 +108,8 @@ it up", "cooked", "a little dangle", "give it a bit of a robustness", "hey" as a
 - Captions: auto-captions mangle the model name ("80 five x", "85 x") and numbers ("2 60"). Fix
   them before publishing; the model name is what people search.
 
-NOT FILLED IN: swearing (none in this transcript), music, upload schedule.
+Upload schedule: none yet (user, 9 Nov 2026). Do not plan or promise dates on the user's
+behalf; suggest a rhythm only when asked (see the 9 Nov audit: one long fix video every two
+weeks, Shorts cut from it).
+
+NOT FILLED IN: swearing (none in this transcript), music.
