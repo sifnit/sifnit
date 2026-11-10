@@ -1,6 +1,6 @@
 # AD5X 16 months later: full maintenance
 
-Status: plan locked 9 Nov 2026. Never oiled or serviced (confirmed by the user). Script, chapters
+Status: plan locked 9 Nov 2026. Spoken draft: script.md (10 Nov 2026). Never oiled or serviced (confirmed by the user). Script, chapters
 and cut list come after the shoot, from the real auto-captions.
 
 ## Deadline
