@@ -14,19 +14,20 @@
   :root:not([data-theme="light"]) {
     --bg: #141414; --panel: #1c1c1c; --line: #2c2c2c; --text: #ececea; --muted: #9a9a94;
     --accent: #5b8cff; --accent-text: #0b0b0b; --ok: #4cc27f; --warn: #ff8a4c; --warn-bg: #2a1d15;
-    --ok-bg: #14261b; --view: #202224; --grid: #3a3d41; --model: #7ea7ff; --overhang: #ff6369;
+    --ok-bg: #14261b; --view: #202224; --grid: #3a3d41; --model: #7ea7ff; --overhang: #ff6369; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #141414; --panel: #1c1c1c; --line: #2c2c2c; --text: #ececea; --muted: #9a9a94;
   --accent: #5b8cff; --accent-text: #0b0b0b; --ok: #4cc27f; --warn: #ff8a4c; --warn-bg: #2a1d15;
-  --ok-bg: #14261b; --view: #202224; --grid: #3a3d41; --model: #7ea7ff; --overhang: #ff6369;
+  --ok-bg: #14261b; --view: #202224; --grid: #3a3d41; --model: #7ea7ff; --overhang: #ff6369; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
 button { font: inherit; cursor: pointer; }
-.app { display: grid; grid-template-columns: 1fr 380px; height: 100vh; }
+html, body { height: 100%; }
+.app { display: grid; grid-template-columns: 1fr 380px; height: 100%; }
 .view { position: relative; background: var(--view); min-height: 320px; }
 .view canvas { display: block; }
 .topbar { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
@@ -79,6 +80,8 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text); max-width: 420px; width: calc(100% - 32px); }
 dialog::backdrop { background: rgba(0,0,0,0.4); }
 .hidden { display: none !important; }
+.msg { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); font-size: 13.5px; }
+pre.code { max-height: 220px; overflow: auto; font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
 @media (max-width: 820px) {
   .app { grid-template-columns: 1fr; grid-template-rows: 45vh auto; height: auto; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
@@ -104,6 +107,7 @@ dialog::backdrop { background: rgba(0,0,0,0.4); }
   <aside class="panel">
     <section>
       <h2>1 · Model</h2>
+      <p class="msg" id="msg" hidden></p>
       <div class="drop" id="drop">
         <p>Drop an STL file here</p>
         <div class="row">
@@ -150,8 +154,9 @@ dialog::backdrop { background: rgba(0,0,0,0.4); }
   <dl class="summary" id="dlgsum"></dl>
   <p class="note">The slicing engine (OrcaSlicer) and printer connection are not wired up yet.
     These are the settings it will use.</p>
+  <details><summary>Settings for OrcaSlicer</summary><pre class="code" id="dlgcode"></pre></details>
   <div class="row" style="justify-content:flex-end;margin-top:14px">
-    <button class="btn" id="dlgjson">Download settings</button>
+    <button class="btn" id="dlgjson">Copy settings</button>
     <button class="btn primary" id="dlgclose">Close</button>
   </div>
 </dialog>
@@ -644,16 +649,20 @@ function render() {
 }
 
 // ---------- loading ----------
+const msgEl = document.getElementById('msg');
+const showMsg = t => { msgEl.textContent = t; msgEl.hidden = !t; };
 const loader = new STLLoader();
 async function loadFile(file) {
-  if (!file || !/\.stl$/i.test(file.name)) { alert('For now only .stl files work.'); return; }
+  if (!file || !/\.stl$/i.test(file.name)) { showMsg('Only .stl files work for now. Export your model as STL and try again.'); return; }
+  showMsg('');
   try { loadGeometry(loader.parse(await file.arrayBuffer()), file.name); }
-  catch (e) { alert('Could not read that file: ' + e.message); }
+  catch (e) { showMsg('Could not read that file. It may be damaged or not a real STL (' + e.message + ').'); }
 }
 
-const FONT_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json';
+// Helvetiker Bold (from three.js), only the letters the samples use.
+const FONT_DATA = {"glyphs":{"D":{"x_min":0,"x_max":864,"ha":968,"o":"m 400 1013 q 736 874 608 1013 q 864 523 864 735 q 717 146 864 293 q 340 0 570 0 l 0 0 l 0 1013 l 400 1013 m 398 837 l 206 837 l 206 182 l 372 182 q 584 276 507 182 q 657 504 657 365 q 594 727 657 632 q 398 837 522 837 "},"B":{"x_min":0,"x_max":835,"ha":938,"o":"m 674 547 q 791 450 747 518 q 835 304 835 383 q 718 75 835 158 q 461 0 612 0 l 0 0 l 0 1013 l 477 1013 q 697 951 609 1013 q 797 754 797 880 q 765 630 797 686 q 674 547 734 575 m 438 621 q 538 646 495 621 q 590 730 590 676 q 537 814 590 785 q 436 838 494 838 l 199 838 l 199 621 l 438 621 m 445 182 q 561 211 513 182 q 618 311 618 247 q 565 410 618 375 q 444 446 512 446 l 199 446 l 199 182 l 445 182 "},"E":{"x_min":0,"x_max":761.109375,"ha":824,"o":"m 761 0 l 0 0 l 0 1013 l 734 1013 l 734 837 l 206 837 l 206 621 l 690 621 l 690 446 l 206 446 l 206 186 l 761 186 l 761 0 "},"L":{"x_min":0,"x_max":704.171875,"ha":763,"o":"m 704 0 l 0 0 l 0 1013 l 208 1013 l 208 186 l 704 186 l 704 0 "}," ":{"x_min":0,"x_max":0,"ha":375},"I":{"x_min":41,"x_max":249,"ha":365,"o":"m 249 0 l 41 0 l 41 1013 l 249 1013 l 249 0 "},"G":{"x_min":0,"x_max":971,"ha":1057,"o":"m 971 -1 l 829 -1 l 805 118 q 479 -29 670 -29 q 126 133 261 -29 q 0 509 0 286 q 130 884 0 737 q 493 1040 268 1040 q 790 948 659 1040 q 961 698 920 857 l 736 698 q 643 813 709 769 q 500 857 578 857 q 285 746 364 857 q 213 504 213 644 q 285 263 213 361 q 505 154 365 154 q 667 217 598 154 q 761 374 736 280 l 548 374 l 548 548 l 971 548 l 971 -1 "},"A":{"x_min":0,"x_max":966.671875,"ha":1069,"o":"m 966 0 l 747 0 l 679 208 l 286 208 l 218 0 l 0 0 l 361 1013 l 600 1013 l 966 0 m 623 376 l 480 810 l 340 376 l 623 376 "}},"cssFontWeight":"bold","ascender":1216,"underlinePosition":-100,"cssFontStyle":"normal","boundingBox":{"yMin":-333,"xMin":-162,"yMax":1216,"xMax":1681},"resolution":1000,"original_font_information":{"postscript_name":"Helvetiker-Bold","version_string":"Version 1.00 2004 initial release","vendor_url":"http://www.magenta.gr","full_font_name":"Helvetiker Bold","font_family_name":"Helvetiker","copyright":"Copyright (c) Magenta ltd, 2004.","description":"","trademark":"","designer":"","designer_url":"","unique_font_identifier":"Magenta ltd:Helvetiker Bold:22-10-104","license_url":"http://www.ellak.gr/fonts/MgOpen/license.html","license_description":"Copyright (c) 2004 by MAGENTA Ltd. All Rights Reserved.\r\n\r\nPermission is hereby granted, free of charge, to any person obtaining a copy of the fonts accompanying this license (\"Fonts\") and associated documentation files (the \"Font Software\"), to reproduce and distribute the Font Software, including without limitation the rights to use, copy, merge, publish, distribute, and/or sell copies of the Font Software, and to permit persons to whom the Font Software is furnished to do so, subject to the following conditions: \r\n\r\nThe above copyright and this permission notice shall be included in all copies of one or more of the Font Software typefaces.\r\n\r\nThe Font Software may be modified, altered, or added to, and in particular the designs of glyphs or characters in the Fonts may be modified and additional glyphs or characters may be added to the Fonts, only if the fonts are renamed to names not containing the word \"MgOpen\", or if the modifications are accepted for inclusion in the Font Software itself by the each appointed Administrator.\r\n\r\nThis License becomes null and void to the extent applicable to Fonts or Font Software that has been modified and is distributed under the \"MgOpen\" name.\r\n\r\nThe Font Software may be sold as part of a larger software package but no copy of one or more of the Font Software typefaces may be sold by itself. \r\n\r\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL MAGENTA OR PERSONS OR BODIES IN CHARGE OF ADMINISTRATION AND MAINTENANCE OF THE FONT SOFTWARE BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.","manufacturer_name":"Magenta ltd","font_sub_family_name":"Bold"},"descender":-334,"familyName":"Helvetiker","lineHeight":1549,"underlineThickness":50};
 let fontPromise;
-const getFont = () => fontPromise ||= new FontLoader().loadAsync(FONT_URL);
+const getFont = () => fontPromise ||= Promise.resolve(new FontLoader().parse(FONT_DATA));
 const posOnly = g => { g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (k !== 'position') g.deleteAttribute(k); return g; };
 const text = (font, str, size, depth) => {
   const g = new TextGeometry(str, { font, size, height: depth, curveSegments: 6, bevelEnabled: false });
@@ -664,7 +673,7 @@ const text = (font, str, size, depth) => {
 async function sample(kind) {
   if (kind === 'coin' || kind === 'b') {
     let font;
-    try { font = await getFont(); } catch { alert('Could not load the font (needs internet).'); return; }
+    font = await getFont();
     if (kind === 'coin') {
       // 40 mm coin, 3 mm thick, top 1 mm sticks out 1 mm past the base (a lip),
       // BEIGELAD raised 0.8 mm on top
@@ -708,16 +717,19 @@ document.getElementById('print').onclick = () => {
     ['Brim', state.brim ? '5 mm' : 'none'], ['Filament', `Slot ${s.filament_slot} · ${s.filament_type} ${s.nozzle_temperature}°C`],
     ['Time', '~' + fmtTime(est.secs)], ['Weight', `~${est.grams.toFixed(0)} g`]];
   document.getElementById('dlgsum').replaceChildren(...pairs.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
+  document.getElementById('dlgcode').textContent = JSON.stringify(s, null, 2);
   dlg.showModal();
 };
 document.getElementById('dlgclose').onclick = () => dlg.close();
 document.getElementById('dlgjson').onclick = () => {
-  const blob = new Blob([JSON.stringify(settings(), null, 2)], { type: 'application/json' });
-  const a = el('a', { href: URL.createObjectURL(blob), download: (state.name || 'model').replace(/\.stl$/i, '') + '-settings.json' });
-  a.click(); URL.revokeObjectURL(a.href);
+  const btn = document.getElementById('dlgjson'), code = document.getElementById('dlgcode');
+  const done = () => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy settings', 1500); };
+  const fallback = () => { code.closest('details').open = true; getSelection().selectAllChildren(code); btn.textContent = 'Selected, press Ctrl+C'; };
+  try { navigator.clipboard.writeText(code.textContent).then(done, fallback); } catch { fallback(); }
 };
 
 render();
+sample('b');
 window.__app = { state, sample, fixAll, getIssues: () => state.base ? getIssues() : [], geometry: () => current && current.g, supportPlan: () => supportPlan() };
 </script>
 </body>
