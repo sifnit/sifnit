@@ -25,11 +25,25 @@ The normal Windows taskbar is hidden while MiniDock runs and comes back when you
 | Right-click an icon | Window list, Open new window, Pin/Unpin, Close |
 | Right-click empty dock space / tray icon | Choose monitor, Start with Windows, Exit |
 | ⊞ button / Win key | Start menu |
+| 🔊 button | Pick speaker/mic, volume, mute, auto-switch rules |
+| Scroll over 🔊 | Volume up/down |
 | Clock | Calendar and notifications |
 
 Underline colors: **blue** means the app you're using now, **gray** means open, and **wider gray** means several windows are open. Pinned apps that aren't running have no line.
 
 To choose the screen, right-click the tray icon (the green **H** near the clock area, or right-click empty space on the dock) and pick **Put dock on monitor N**. Your choice is remembered.
+
+## Sound: keep the Bluetooth headset as default
+
+Windows switches your default sound device whenever a new one appears, for example when you plug in a monitor that has speakers. MiniDock stops that:
+
+- **Headset on:** speaker and mic go to the headset, even when you plug in screens.
+- **Headset off:** they go to your **backup** device (e.g. PC speakers), never the monitor.
+- **You switch manually** (from the 🔊 menu or Windows): your choice is left alone until something is plugged in or out again.
+
+The first time it runs, it picks your Bluetooth headset as **preferred** and your current non-monitor device as **backup**. To change either, click 🔊, choose **Auto-switch**, then pick the preferred/backup speaker and microphone. The headset is listed even when it's off. Settings are saved in `MiniDock.ini`.
+
+**Bluetooth tip:** many headsets show up twice, as "Headphones" (good stereo sound) and "Headset / Hands-Free" (includes the mic, but phone-call quality). If music sounds bad whenever the headset mic is the default, set **Preferred microphone** to your PC/webcam mic instead.
 
 ## Settings
 
@@ -39,7 +53,8 @@ Open `MiniDock.ahk` in Notepad and edit the `SETTINGS` block at the top. Then ri
 - `CELL_PADDING`, `ICON_GAP`: how tightly packed the icons are.
 - `BOTTOM_MARGIN`: `0` makes the dock touch the bottom edge.
 - `HIDE_WINDOWS_TASKBAR`: `false` keeps the real taskbar too.
-- `SHOW_START_BUTTON`, `SHOW_CLOCK`.
+- `SHOW_START_BUTTON`, `SHOW_CLOCK`, `SHOW_SOUND_BUTTON`.
+- `AUTO_AUDIO`: `false` turns off the headset auto-switching.
 
 Pinned apps and the chosen monitor are saved in `MiniDock.ini`.
 
@@ -53,7 +68,7 @@ The real taskbar is set to auto-hide (so Windows stops reserving the bottom stri
 
 ## Known limits
 
-- **No system tray icons** (Wi-Fi, volume, OneDrive and so on). Use **Win+A** for quick settings and **Win+N** for notifications.
+- **No system tray icons** (Wi-Fi, OneDrive and so on). Sound has its own 🔊 button. Use **Win+A** for quick settings and **Win+N** for notifications.
 - Windows of apps running **as administrator** can't be switched to unless MiniDock also runs as admin.
 - The dock floats over the very bottom of maximized windows.
 - If MiniDock gets force-killed and the taskbar doesn't come back, run `RestoreTaskbar.ahk`.

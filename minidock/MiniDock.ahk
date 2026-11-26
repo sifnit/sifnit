@@ -20,6 +20,8 @@ RUNNING_COLOR        := "8A8A8A"  ; underline for apps that are open
 HIDE_WINDOWS_TASKBAR := true      ; hide the real taskbar while MiniDock runs
 SHOW_START_BUTTON    := true
 SHOW_CLOCK           := true
+SHOW_SOUND_BUTTON    := true      ; speaker button: pick device, volume, mute
+AUTO_AUDIO           := true      ; keep your preferred (headset) speaker/mic as default
 REFRESH_MS           := 300       ; how often to check for opened/closed windows
 ; ==================================================================
 
@@ -38,6 +40,8 @@ global DockHidden := false
 global PathCache := Map()
 global OrigTaskbarState := -1
 
+#Include Audio.ahk
+
 SetupTray()
 if HIDE_WINDOWS_TASKBAR {
     OrigTaskbarState := GetTaskbarState()
@@ -47,10 +51,10 @@ if HIDE_WINDOWS_TASKBAR {
 OnExit(Cleanup)
 OnMessage(0x7E, (*) => ForceRebuild())   ; WM_DISPLAYCHANGE (monitor plugged/unplugged)
 OnMessage(0x208, OnMiddleClick)          ; WM_MBUTTONUP: middle-click = new window
+AudioInit()
 Tick()
 SetTimer(Tick, REFRESH_MS)
-if SHOW_CLOCK
-    SetTimer(UpdateClock, 1000)
+SetTimer(UpdateClock, 1000)
 return
 
 ; ------------------------------------------------------------------
@@ -160,7 +164,7 @@ RealPath(hwnd) {
 ; Drawing the dock
 ; ------------------------------------------------------------------
 BuildDock(list) {
-    global Dock, DockHwnd, Buttons, Indicators, ClockCtrl, DockHidden
+    global Dock, DockHwnd, Buttons, Indicators, ClockCtrl, DockHidden, SoundCtrl
     sz   := Round(ICON_SIZE * Scale)
     pad  := Round(CELL_PADDING * Scale)
     gap  := Round(ICON_GAP * Scale)
@@ -196,6 +200,15 @@ BuildDock(list) {
         x += cell + gap
     }
 
+    snd := 0
+    if SHOW_SOUND_BUTTON {
+        g.SetFont("s" Round(ICON_SIZE * 0.45) " cFFFFFF", "Segoe MDL2 Assets")
+        snd := g.Add("Text", "x" x " y0 w" cell " h" cell " Center +0x200 +0x100", SoundGlyph())
+        snd.OnEvent("Click", (*) => ShowSoundMenu())
+        btns[snd.Hwnd] := "*sound"
+        x += cell
+    }
+
     clk := 0
     if SHOW_CLOCK {
         g.SetFont("s9 cFFFFFF", "Segoe UI")
@@ -216,7 +229,7 @@ BuildDock(list) {
     RoundCorners(g.Hwnd)
 
     old := Dock
-    Dock := g, DockHwnd := g.Hwnd, Buttons := btns, Indicators := inds, ClockCtrl := clk
+    Dock := g, DockHwnd := g.Hwnd, Buttons := btns, Indicators := inds, ClockCtrl := clk, SoundCtrl := snd
     DockHidden := false
     if old
         old.Destroy()
@@ -315,6 +328,8 @@ TipFor(key) {
         return "Start"
     if key = "*clock"
         return FormatTime(, "LongDate")
+    if key = "*sound"
+        return SoundTip()
     path := Groups.Has(key) ? Groups[key].path : PinnedPath(key)
     name := path ~= "i)^uwp:" ? SubStr(path, 5) : AppName(path)
     n := Groups.Has(key) ? Groups[key].wins.Length : 0
@@ -350,6 +365,7 @@ ClockText() => FormatTime(, "Time")
 UpdateClock() {
     if ClockCtrl
         try ClockCtrl.Text := ClockText()
+    UpdateSoundButton()
 }
 
 ; ------------------------------------------------------------------
@@ -377,6 +393,8 @@ OnIconClick(key, *) {
 OnDockContext(g, ctrl, *) {
     if ctrl && Buttons.Has(ctrl.Hwnd) {
         key := Buttons[ctrl.Hwnd]
+        if key = "*sound"
+            return ShowSoundMenu()
         if SubStr(key, 1, 1) != "*"
             return ShowAppMenu(key, true)
     }
